@@ -8,25 +8,35 @@ interface Props {
 
 export function QrScanner({ onScan, onError }: Props) {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [deviceId, setDeviceId] = useState<string | undefined>(undefined);
+  const [selectedId, setSelectedId] = useState<string>('');
+
+  async function loadDevices() {
+    const all = await navigator.mediaDevices.enumerateDevices();
+    const cameras = all.filter((d) => d.kind === 'videoinput');
+    setDevices(cameras);
+  }
 
   useEffect(() => {
-    navigator.mediaDevices.enumerateDevices().then((all) => {
-      const cameras = all.filter((d) => d.kind === 'videoinput');
-      setDevices(cameras);
-      // Default to the last camera — on most setups the physical camera comes after virtual ones
-      if (cameras.length > 0) setDeviceId(cameras[cameras.length - 1].deviceId);
-    });
+    // First call: may return empty labels before permission is granted
+    loadDevices();
+    // Second call after scanner starts and grants permission — labels populate
+    const t = setTimeout(loadDevices, 1500);
+    return () => clearTimeout(t);
   }, []);
+
+  const constraints: MediaTrackConstraints | undefined = selectedId
+    ? { deviceId: { exact: selectedId } }
+    : undefined;
 
   return (
     <div className="space-y-2">
       {devices.length > 1 && (
         <select
-          value={deviceId}
-          onChange={(e) => setDeviceId(e.target.value)}
+          value={selectedId}
+          onChange={(e) => setSelectedId(e.target.value)}
           className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
         >
+          <option value="">Default camera</option>
           {devices.map((d, i) => (
             <option key={d.deviceId} value={d.deviceId}>
               {d.label || `Camera ${i + 1}`}
@@ -35,8 +45,10 @@ export function QrScanner({ onScan, onError }: Props) {
         </select>
       )}
       <div className="overflow-hidden rounded-xl">
+        {/* key forces a remount when the selected camera changes */}
         <Scanner
-          constraints={{ deviceId: deviceId ? { exact: deviceId } : undefined }}
+          key={selectedId || 'default'}
+          constraints={constraints}
           onScan={(results) => {
             const raw = results[0]?.rawValue;
             if (!raw) return;
