@@ -68,6 +68,8 @@ npm run dev             # starts on http://localhost:5173
 
 The seed script creates a demo gym with a join QR and a check-in QR. QR images are saved to `backend/seed-output/` — open them on your phone or display them on screen to test the full scan flow.
 
+> **Seed credentials** are printed to the console after `npm run seed`.
+
 ---
 
 ## Project status
