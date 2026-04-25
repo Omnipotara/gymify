@@ -1,6 +1,7 @@
-import { ConflictError, NotFoundError } from '../../lib/errors';
+import { AppError, ConflictError, NotFoundError } from '../../lib/errors';
 import { verifyQrPayload } from '../../lib/qr';
 import { findById } from '../gyms/gyms.repository';
+import { findActiveByUserAndGym } from '../memberships/memberships.repository';
 import * as repo from './checkins.repository';
 import type { CheckIn } from './checkins.types';
 
@@ -22,6 +23,10 @@ export async function checkIn(
     const { ValidationError } = await import('../../lib/errors');
     throw new ValidationError('Invalid QR code');
   }
+
+  // Enforce active membership
+  const active = await findActiveByUserAndGym(gymId, userId);
+  if (!active) throw new AppError('NO_ACTIVE_MEMBERSHIP', 'No active membership for this gym', 403);
 
   // Dedup: reject if already checked in within the window
   const recent = await repo.findRecentByUserAndGym(gymId, userId, DEDUP_WINDOW_MINUTES);

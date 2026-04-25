@@ -10,6 +10,7 @@ import { authRouter } from './modules/auth/auth.routes';
 import { usersRouter } from './modules/users/users.routes';
 import { gymsRouter } from './modules/gyms/gyms.routes';
 import { checkinsRouter } from './modules/checkins/checkins.routes';
+import { membershipsRouter } from './modules/memberships/memberships.routes';
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/me', usersRouter);
 app.use('/api/gyms', gymsRouter);
 app.use('/api/gyms/:gymId', checkinsRouter);
+app.use('/api/gyms/:gymId', membershipsRouter);
 
 // 404 — must come after all routes
 app.use((_req, res) => {

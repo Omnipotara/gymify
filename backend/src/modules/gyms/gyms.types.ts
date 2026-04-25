@@ -15,3 +15,18 @@ export interface JoinResponse {
     role: 'member';
   };
 }
+
+import type { MembershipStatus } from '../../lib/membership-status';
+
+export interface MemberWithStatus {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: 'member' | 'admin';
+  joined_at: string;
+  membership: {
+    status: MembershipStatus;
+    start_date: string | null;
+    end_date: string | null;
+  };
+}

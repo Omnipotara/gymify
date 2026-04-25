@@ -1,0 +1,50 @@
+import { query } from '../../db/client';
+import type { Membership } from './memberships.types';
+
+const COLS = 'id, user_id, gym_id, start_date::text, end_date::text, created_by, created_at::text';
+
+/** Most recent membership for a user at a gym (any status). Used for status display. */
+export async function findLatestByUserAndGym(
+  gymId: string,
+  userId: string,
+): Promise<Membership | null> {
+  const { rows } = await query<Membership>(
+    `SELECT ${COLS} FROM memberships
+     WHERE gym_id = $1 AND user_id = $2
+     ORDER BY end_date DESC LIMIT 1`,
+    [gymId, userId],
+  );
+  return rows[0] ?? null;
+}
+
+/** Returns truthy if the user has a currently active membership. Used for check-in gate. */
+export async function findActiveByUserAndGym(
+  gymId: string,
+  userId: string,
+): Promise<Membership | null> {
+  const { rows } = await query<Membership>(
+    `SELECT ${COLS} FROM memberships
+     WHERE gym_id = $1 AND user_id = $2
+       AND start_date <= CURRENT_DATE
+       AND end_date >= CURRENT_DATE
+     LIMIT 1`,
+    [gymId, userId],
+  );
+  return rows[0] ?? null;
+}
+
+export async function create(data: {
+  gymId: string;
+  userId: string;
+  startDate: string;
+  endDate: string;
+  createdBy: string;
+}): Promise<Membership> {
+  const { rows } = await query<Membership>(
+    `INSERT INTO memberships (user_id, gym_id, start_date, end_date, created_by)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING ${COLS}`,
+    [data.userId, data.gymId, data.startDate, data.endDate, data.createdBy],
+  );
+  return rows[0];
+}
