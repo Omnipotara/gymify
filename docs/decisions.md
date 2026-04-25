@@ -4,6 +4,27 @@ A running list of non-obvious decisions and the reasoning behind them. New entri
 
 ---
 
+## 2026-04-26 — Check-in hard-gated behind active membership (Slice 2)
+**Decision**: If a member has no active membership, the check-in endpoint returns an error. No "allow but flag" soft mode.
+**Why**: A soft gate adds complexity (what does "flagged" mean? who sees it?) with no clear payoff. Hard gate is simple and honest — if you haven't paid, you can't check in.
+**Alternative considered**: Allow check-in but mark it as unverified. Rejected — ambiguous semantics, deferred the problem rather than solving it.
+
+---
+
+## 2026-04-26 — "Expiring soon" threshold is 3 days
+**Decision**: A membership is `expiring_soon` if `end_date` is within 3 days from today. Computed in the service layer, never stored.
+**Why**: 3 days gives the member enough notice to renew without being annoying weeks in advance. Not configurable per gym in v1 — a global constant is simpler and can be made configurable later if gyms ask for it.
+**Alternative considered**: 7 or 14 days. Rejected as too early — creates alert fatigue.
+
+---
+
+## 2026-04-26 — Admins can backdate memberships
+**Decision**: The `start_date` on a membership can be set to any past date. No lower bound enforced.
+**Why**: Members often pay at the counter before the admin has time to enter it. Backdating lets the record reflect reality — if someone paid on the 20th, their membership starts on the 20th.
+**Alternative considered**: Force start_date >= today. Rejected — penalises members for admin delays.
+
+---
+
 ## 2026-04-25 — Build in vertical slices, not horizontal layers
 **Decision**: Ship Slice 1 (auth + join + check-in) end-to-end before starting Slice 2.
 **Why**: Each slice is demonstrable, exercises the full stack, and surfaces integration issues early.
