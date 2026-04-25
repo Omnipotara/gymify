@@ -6,6 +6,10 @@ import rateLimit from 'express-rate-limit';
 import { config } from './config';
 import { logger } from './lib/logger';
 import { errorHandler } from './middleware/error-handler';
+import { authRouter } from './modules/auth/auth.routes';
+import { usersRouter } from './modules/users/users.routes';
+import { gymsRouter } from './modules/gyms/gyms.routes';
+import { checkinsRouter } from './modules/checkins/checkins.routes';
 
 const app = express();
 
@@ -38,11 +42,10 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Feature routers are mounted here as each module is built:
-// app.use('/api/auth', authRouter);
-// app.use('/api/me', meRouter);
-// app.use('/api/gyms', gymsRouter);
-// app.use('/api/platform', platformRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/me', usersRouter);
+app.use('/api/gyms', gymsRouter);
+app.use('/api/gyms/:gymId', checkinsRouter);
 
 // 404 — must come after all routes
 app.use((_req, res) => {
