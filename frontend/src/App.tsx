@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage';
 import GymListPage from './pages/GymListPage';
 import GymPage from './pages/GymPage';
 import AdminPage from './pages/AdminPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 
 export default function App() {
   return (
@@ -32,6 +33,14 @@ export default function App() {
         element={
           <RequireAuth>
             <AdminPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/gyms/:gymId/admin/analytics"
+        element={
+          <RequireAuth>
+            <AnalyticsPage />
           </RequireAuth>
         }
       />

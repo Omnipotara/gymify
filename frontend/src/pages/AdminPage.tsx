@@ -157,7 +157,10 @@ export default function AdminPage() {
         <Link to={`/gyms/${gymId}`} className="text-sm text-blue-600 hover:underline">
           ← Member View
         </Link>
-        <h1 className="text-lg font-semibold text-gray-900">Admin Dashboard</h1>
+        <h1 className="text-lg font-semibold text-gray-900">Members</h1>
+        <Link to={`/gyms/${gymId}/admin/analytics`} className="ml-auto text-sm text-blue-600 hover:underline">
+          Analytics →
+        </Link>
       </header>
 
       <main className="mx-auto max-w-lg p-4 space-y-3">
