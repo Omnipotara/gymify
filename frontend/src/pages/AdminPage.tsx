@@ -2,9 +2,20 @@ import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMembers, createMembership, patchMembership, endMembershipsForUser } from '../features/memberships/api';
+import { getGymCheckInLog } from '../features/checkins/api';
 import { MembershipBadge } from '../components/MembershipBadge';
 import { ApiError } from '../lib/api-client';
 import type { MemberWithStatus, MembershipStatus } from '../features/memberships/types';
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -150,6 +161,13 @@ export default function AdminPage() {
     enabled: !!gymId,
   });
 
+  const { data: logData } = useQuery({
+    queryKey: ['gym-checkin-log', gymId],
+    queryFn: () => getGymCheckInLog(gymId!),
+    enabled: !!gymId,
+    refetchInterval: 5000,
+  });
+
   const expiringSoon = data?.items.filter((m) => m.membership.status === 'expiring_soon') ?? [];
 
   return (
@@ -169,67 +187,99 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-lg p-4 space-y-3">
-        {expiringSoon.length > 0 && (
-          <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-            ⚠️ {expiringSoon.length} membership{expiringSoon.length > 1 ? 's' : ''} expiring within 3 days:{' '}
-            {expiringSoon.map((m) => m.full_name ?? m.email).join(', ')}
-          </div>
-        )}
-
-        <h2 className="text-sm font-medium text-gray-500">
-          {data ? `${data.items.length} member${data.items.length !== 1 ? 's' : ''}` : 'Members'}
-        </h2>
-
-        {isLoading && <p className="text-center text-gray-400 py-8">Loading…</p>}
-
-        {data?.items.map((member) => {
-          const isActive = member.membership.status === 'active' || member.membership.status === 'expiring_soon';
-          return (
-            <div key={member.id} className="rounded-xl bg-white shadow-sm overflow-hidden">
-              <div
-                onClick={() => navigate(`/gyms/${gymId}/admin/members/${member.id}`)}
-                className="p-4 flex items-start justify-between cursor-pointer hover:bg-gray-50 transition-colors"
-              >
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    {member.full_name ?? member.email}
-                  </p>
-                  {member.full_name && (
-                    <p className="text-xs text-gray-400">{member.email}</p>
-                  )}
-                  {member.membership.end_date && (
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      until {member.membership.end_date}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <MembershipBadge status={member.membership.status} />
-                  {isActive && (
-                    <EndMembershipButton gymId={gymId!} userId={member.id} />
-                  )}
-                  <button
-                    onClick={() => setExpandedId(expandedId === member.id ? null : member.id)}
-                    className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-                  >
-                    {expandedId === member.id ? 'Cancel' : isActive ? 'Modify' : '+ Add'}
-                  </button>
-                </div>
+      <main className="mx-auto max-w-5xl p-4">
+        <div className="flex gap-4 items-start">
+          {/* ── Members column ── */}
+          <div className="flex-1 min-w-0 space-y-3">
+            {expiringSoon.length > 0 && (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                ⚠️ {expiringSoon.length} membership{expiringSoon.length > 1 ? 's' : ''} expiring within 3 days:{' '}
+                {expiringSoon.map((m) => m.full_name ?? m.email).join(', ')}
               </div>
+            )}
 
-              {expandedId === member.id && (
-                <div className="px-4 pb-4 border-t">
-                  <MembershipForm
-                    gymId={gymId!}
-                    member={member}
-                    onClose={() => setExpandedId(null)}
-                  />
+            <h2 className="text-sm font-medium text-gray-500">
+              {data ? `${data.items.length} member${data.items.length !== 1 ? 's' : ''}` : 'Members'}
+            </h2>
+
+            {isLoading && <p className="text-center text-gray-400 py-8">Loading…</p>}
+
+            {data?.items.map((member) => {
+              const isActive = member.membership.status === 'active' || member.membership.status === 'expiring_soon';
+              return (
+                <div key={member.id} className="rounded-xl bg-white shadow-sm overflow-hidden">
+                  <div
+                    onClick={() => navigate(`/gyms/${gymId}/admin/members/${member.id}`)}
+                    className="p-4 flex items-start justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {member.full_name ?? member.email}
+                      </p>
+                      {member.full_name && (
+                        <p className="text-xs text-gray-400">{member.email}</p>
+                      )}
+                      {member.membership.end_date && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          until {member.membership.end_date}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <MembershipBadge status={member.membership.status} />
+                      {isActive && (
+                        <EndMembershipButton gymId={gymId!} userId={member.id} />
+                      )}
+                      <button
+                        onClick={() => setExpandedId(expandedId === member.id ? null : member.id)}
+                        className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                      >
+                        {expandedId === member.id ? 'Cancel' : isActive ? 'Modify' : '+ Add'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {expandedId === member.id && (
+                    <div className="px-4 pb-4 border-t" onClick={(e) => e.stopPropagation()}>
+                      <MembershipForm
+                        gymId={gymId!}
+                        member={member}
+                        onClose={() => setExpandedId(null)}
+                      />
+                    </div>
+                  )}
                 </div>
+              );
+            })}
+          </div>
+
+          {/* ── Live check-in log ── */}
+          <div className="w-72 shrink-0 space-y-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-medium text-gray-500">Live Check-ins</h2>
+              <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+            </div>
+            <div className="rounded-xl bg-white shadow-sm overflow-hidden">
+              {!logData || logData.items.length === 0 ? (
+                <p className="text-center text-gray-400 py-8 text-sm">No check-ins yet.</p>
+              ) : (
+                <ul className="divide-y max-h-[600px] overflow-y-auto">
+                  {logData.items.map((entry) => (
+                    <li key={entry.id} className="px-4 py-3">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {entry.member_name ?? entry.member_email}
+                      </p>
+                      {entry.member_name && (
+                        <p className="text-xs text-gray-400 truncate">{entry.member_email}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-0.5">{timeAgo(entry.checked_in_at)}</p>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
-          );
-        })}
+          </div>
+        </div>
       </main>
     </div>
   );

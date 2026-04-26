@@ -28,6 +28,27 @@ export async function create(gymId: string, userId: string): Promise<CheckIn> {
   return rows[0];
 }
 
+export interface CheckInLogEntry {
+  id: string;
+  user_id: string;
+  checked_in_at: Date;
+  member_name: string | null;
+  member_email: string;
+}
+
+export async function findRecentForGym(gymId: string, limit: number): Promise<CheckInLogEntry[]> {
+  const { rows } = await query<CheckInLogEntry>(
+    `SELECT ci.id, ci.user_id, ci.checked_in_at, u.full_name AS member_name, u.email AS member_email
+     FROM check_ins ci
+     JOIN users u ON u.id = ci.user_id
+     WHERE ci.gym_id = $1
+     ORDER BY ci.checked_in_at DESC
+     LIMIT $2`,
+    [gymId, limit],
+  );
+  return rows;
+}
+
 export async function findByUserAndGym(
   gymId: string,
   userId: string,

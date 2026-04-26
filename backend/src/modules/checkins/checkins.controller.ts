@@ -10,6 +10,15 @@ export async function handleCheckIn(req: Request, res: Response, next: NextFunct
   }
 }
 
+export async function handleGetGymLog(req: Request, res: Response, next: NextFunction) {
+  try {
+    const items = await service.getGymLog(req.params.gymId);
+    res.json({ items });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function handleGetHistory(req: Request, res: Response, next: NextFunction) {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 100);

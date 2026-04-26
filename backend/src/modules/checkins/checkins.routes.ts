@@ -2,7 +2,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { requireAuth } from '../../middleware/require-auth';
 import { requireGymMembership } from '../../middleware/require-gym-membership';
-import { handleCheckIn, handleGetHistory } from './checkins.controller';
+import { handleCheckIn, handleGetHistory, handleGetGymLog } from './checkins.controller';
 
 const qrLimiter = rateLimit({
   windowMs: 60_000,
@@ -28,4 +28,12 @@ checkinsRouter.get(
   requireAuth,
   requireGymMembership(),
   handleGetHistory,
+);
+
+// Admin: gym-wide live check-in log
+checkinsRouter.get(
+  '/check-ins',
+  requireAuth,
+  requireGymMembership('admin'),
+  handleGetGymLog,
 );

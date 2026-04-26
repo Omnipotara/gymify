@@ -48,6 +48,13 @@ export async function checkIn(
   return { ...checkInRecord, new_rewards };
 }
 
+export async function getGymLog(
+  gymId: string,
+  limit = 30,
+): Promise<import('./checkins.repository').CheckInLogEntry[]> {
+  return repo.findRecentForGym(gymId, limit);
+}
+
 export async function getHistory(
   gymId: string,
   userId: string,
