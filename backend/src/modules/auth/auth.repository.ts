@@ -1,7 +1,7 @@
 import { query } from '../../db/client';
 import type { DbUser } from './auth.types';
 
-const USER_COLS = 'id, email, password_hash, full_name, is_super_admin';
+const USER_COLS = 'id, email, password_hash, full_name, is_super_admin, phone';
 
 export async function findUserByEmail(email: string): Promise<DbUser | null> {
   const { rows } = await query<DbUser>(
@@ -15,12 +15,13 @@ export async function createUser(data: {
   email: string;
   passwordHash: string;
   fullName?: string;
+  phone?: string;
 }): Promise<DbUser> {
   const { rows } = await query<DbUser>(
-    `INSERT INTO users (email, password_hash, full_name)
-     VALUES ($1, $2, $3)
+    `INSERT INTO users (email, password_hash, full_name, phone)
+     VALUES ($1, $2, $3, $4)
      RETURNING ${USER_COLS}`,
-    [data.email.toLowerCase(), data.passwordHash, data.fullName ?? null],
+    [data.email.toLowerCase(), data.passwordHash, data.fullName ?? null, data.phone ?? null],
   );
   return rows[0];
 }

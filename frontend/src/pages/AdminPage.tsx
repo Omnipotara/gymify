@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMembers, createMembership, patchMembership, endMembershipsForUser } from '../features/memberships/api';
 import { MembershipBadge } from '../components/MembershipBadge';
@@ -141,6 +141,7 @@ function EndMembershipButton({
 
 export default function AdminPage() {
   const { gymId } = useParams<{ gymId: string }>();
+  const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -188,9 +189,12 @@ export default function AdminPage() {
             <div key={member.id} className="rounded-xl bg-white p-4 shadow-sm">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">
+                  <button
+                    onClick={() => navigate(`/gyms/${gymId}/admin/members/${member.id}`)}
+                    className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline text-left"
+                  >
                     {member.full_name ?? member.email}
-                  </p>
+                  </button>
                   {member.full_name && (
                     <p className="text-xs text-gray-400">{member.email}</p>
                   )}

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 import { useAuth } from '../lib/auth-context';
 import { register } from '../features/auth/api';
 import { ApiError } from '../lib/api-client';
@@ -10,6 +12,7 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState<string | undefined>(undefined);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -18,7 +21,7 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await register({ email, password, full_name: fullName || undefined });
+      const res = await register({ email, password, full_name: fullName || undefined, phone });
       setAuth(res.token, res.user);
       navigate('/gyms', { replace: true });
     } catch (err) {
@@ -62,6 +65,19 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Phone number <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <div className="phone-input-wrapper">
+              <PhoneInput
+                international
+                defaultCountry="RS"
+                value={phone}
+                onChange={(val) => setPhone(val)}
+              />
+            </div>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button

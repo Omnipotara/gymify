@@ -68,6 +68,15 @@ export async function handlePatchMembership(req: Request, res: Response, next: N
   }
 }
 
+export async function handleGetMemberProfile(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = await service.getMemberProfile(req.params.gymId, req.params.userId);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function handleCreateMembership(req: Request, res: Response, next: NextFunction) {
   try {
     const result = createSchema.safeParse(req.body);

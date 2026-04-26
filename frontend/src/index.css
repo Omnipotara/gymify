@@ -1,3 +1,33 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* react-phone-number-input — match our input style */
+.PhoneInput {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+.PhoneInput:focus-within {
+  border-color: #3b82f6;
+  outline: none;
+}
+.PhoneInputInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  background: transparent;
+}
+.PhoneInputCountrySelect {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.875rem;
+  cursor: pointer;
+}

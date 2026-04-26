@@ -128,6 +128,20 @@ export async function getWeeklyTrend(gymId: string, userId: string): Promise<Wee
   return rows;
 }
 
+export async function findMemberInfo(
+  gymId: string,
+  userId: string,
+): Promise<{ id: string; email: string; full_name: string | null; phone: string | null; role: string; joined_at: string } | null> {
+  const { rows } = await query<{ id: string; email: string; full_name: string | null; phone: string | null; role: string; joined_at: string }>(
+    `SELECT u.id, u.email, u.full_name, u.phone, ug.role, ug.joined_at::text
+     FROM users u
+     JOIN user_gyms ug ON ug.user_id = u.id AND ug.gym_id = $1
+     WHERE u.id = $2`,
+    [gymId, userId],
+  );
+  return rows[0] ?? null;
+}
+
 export async function create(data: {
   gymId: string;
   userId: string;

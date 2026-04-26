@@ -2,7 +2,7 @@ import { NotFoundError } from '../../lib/errors';
 import { computeMembershipStatus } from '../../lib/membership-status';
 import { findUserGym } from '../gyms/gyms.repository';
 import * as repo from './memberships.repository';
-import type { MembershipWithStatus, MyMembershipResponse, MemberStatsResponse } from './memberships.types';
+import type { MembershipWithStatus, MyMembershipResponse, MemberStatsResponse, MemberProfileResponse } from './memberships.types';
 
 export async function getMyMembership(
   gymId: string,
@@ -39,6 +39,40 @@ export async function getMemberStats(
     days_until_expiry: userRole === 'admin' ? null : stats.days_until_expiry,
     member_since: stats.member_since,
     weekly_trend,
+  };
+}
+
+export async function getMemberProfile(gymId: string, userId: string): Promise<MemberProfileResponse> {
+  const info = await repo.findMemberInfo(gymId, userId);
+  if (!info) throw new NotFoundError('Member not found in this gym');
+
+  const [membership, statsRow, weekly_trend] = await Promise.all([
+    repo.findLatestByUserAndGym(gymId, userId),
+    repo.getMemberStats(gymId, userId),
+    repo.getWeeklyTrend(gymId, userId),
+  ]);
+
+  return {
+    id: info.id,
+    email: info.email,
+    full_name: info.full_name,
+    phone: info.phone,
+    role: info.role as 'member' | 'admin',
+    joined_at: info.joined_at,
+    membership: {
+      id: membership?.id ?? null,
+      status: computeMembershipStatus(membership),
+      start_date: membership?.start_date ?? null,
+      end_date: membership?.end_date ?? null,
+    },
+    stats: {
+      total_visits: statsRow.total_visits,
+      visits_last_30_days: statsRow.visits_last_30_days,
+      visits_this_week: statsRow.visits_this_week,
+      days_until_expiry: statsRow.days_until_expiry,
+      member_since: statsRow.member_since,
+      weekly_trend,
+    },
   };
 }
 

@@ -7,6 +7,8 @@ import GymPage from './pages/GymPage';
 import AdminPage from './pages/AdminPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import RewardsAdminPage from './pages/RewardsAdminPage';
+import ProfilePage from './pages/ProfilePage';
+import MemberProfileAdminPage from './pages/MemberProfileAdminPage';
 
 export default function App() {
   return (
@@ -50,6 +52,22 @@ export default function App() {
         element={
           <RequireAuth>
             <RewardsAdminPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <RequireAuth>
+            <ProfilePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/gyms/:gymId/admin/members/:userId"
+        element={
+          <RequireAuth>
+            <MemberProfileAdminPage />
           </RequireAuth>
         }
       />

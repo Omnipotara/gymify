@@ -7,32 +7,9 @@ import { getMyRewards } from '../features/rewards/api';
 import { getMyGyms } from '../features/gyms/api';
 import { QrScanner } from '../components/QrScanner';
 import { MembershipBadge } from '../components/MembershipBadge';
+import { WeeklyTrendBars } from '../components/WeeklyTrendBars';
 import { ApiError } from '../lib/api-client';
-import type { WeeklyVisit } from '../features/memberships/types';
 import type { RewardSummary } from '../features/rewards/types';
-
-const WEEK_LABELS = ['This week', 'Last week', '2 wks ago', '3 wks ago'];
-
-function WeeklyTrendBars({ trend }: { trend: WeeklyVisit[] }) {
-  const max = Math.max(...trend.map((w) => w.visits), 1);
-  // Display oldest → newest (left to right)
-  const ordered = [...trend].reverse();
-  return (
-    <div className="flex items-end gap-1.5 h-10">
-      {ordered.map((w) => {
-        const label = WEEK_LABELS[3 - w.week_offset];
-        const pct = (w.visits / max) * 100;
-        return (
-          <div key={w.week_offset} className="flex flex-col items-center gap-0.5 flex-1">
-            <span className="text-xs font-medium text-gray-600">{w.visits}</span>
-            <div className="w-full rounded-t-sm bg-blue-400" style={{ height: `${Math.max(pct * 0.28, w.visits > 0 ? 4 : 1)}px` }} />
-            <span className="text-[10px] text-gray-400 text-center leading-tight whitespace-nowrap">{label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 export default function GymPage() {
   const { gymId } = useParams<{ gymId: string }>();

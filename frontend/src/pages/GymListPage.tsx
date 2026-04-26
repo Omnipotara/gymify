@@ -35,6 +35,7 @@ export default function GymListPage() {
         <h1 className="text-lg font-semibold text-gray-900">My Gyms</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">{user?.email}</span>
+          <Link to="/profile" className="text-sm text-blue-600 hover:underline">Profile</Link>
           <button onClick={logout} className="text-sm text-red-500 hover:text-red-700">
             Sign out
           </button>

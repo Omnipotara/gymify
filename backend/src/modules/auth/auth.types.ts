@@ -12,4 +12,5 @@ export interface AuthResponse {
 
 export interface DbUser extends AuthUser {
   password_hash: string;
+  phone: string | null;
 }

@@ -18,3 +18,13 @@ export async function handleGetMyGyms(req: Request, res: Response, next: NextFun
     next(err);
   }
 }
+
+export async function handleUpdateMe(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { full_name, phone } = req.body as { full_name?: string | null; phone?: string | null };
+    const user = await service.updateMe(req.user!.id, { full_name, phone });
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+}

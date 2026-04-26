@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/require-auth';
 import { requireGymMembership } from '../../middleware/require-gym-membership';
-import { handleGetMemberStats, handleGetMyMembership, handleCreateMembership, handlePatchMembership, handleEndMembershipForUser } from './memberships.controller';
+import { handleGetMemberStats, handleGetMyMembership, handleCreateMembership, handlePatchMembership, handleEndMembershipForUser, handleGetMemberProfile } from './memberships.controller';
 
 export const membershipsRouter = Router({ mergeParams: true });
 
@@ -19,3 +19,6 @@ membershipsRouter.post('/memberships/end', requireAuth, requireGymMembership('ad
 
 // Admin: update end_date of an existing membership (used to end early or correct a mistake)
 membershipsRouter.patch('/memberships/:membershipId', requireAuth, requireGymMembership('admin'), handlePatchMembership);
+
+// Admin: view a specific member's profile + stats
+membershipsRouter.get('/members/:userId', requireAuth, requireGymMembership('admin'), handleGetMemberProfile);

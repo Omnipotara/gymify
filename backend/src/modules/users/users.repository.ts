@@ -3,8 +3,28 @@ import type { MeResponse, GymSummary } from './users.types';
 
 export async function findById(id: string): Promise<MeResponse | null> {
   const { rows } = await query<MeResponse>(
-    'SELECT id, email, full_name, is_super_admin FROM users WHERE id = $1',
+    'SELECT id, email, full_name, phone, is_super_admin FROM users WHERE id = $1',
     [id],
+  );
+  return rows[0] ?? null;
+}
+
+export async function updateProfile(
+  id: string,
+  patch: { full_name?: string | null; phone?: string | null },
+): Promise<MeResponse | null> {
+  const setClauses: string[] = [];
+  const values: unknown[] = [id];
+  let idx = 2;
+  if ('full_name' in patch) { setClauses.push(`full_name = $${idx++}`); values.push(patch.full_name ?? null); }
+  if ('phone' in patch) { setClauses.push(`phone = $${idx++}`); values.push(patch.phone ?? null); }
+  if (setClauses.length === 0) return findById(id);
+
+  const { rows } = await query<MeResponse>(
+    `UPDATE users SET ${setClauses.join(', ')}
+     WHERE id = $1
+     RETURNING id, email, full_name, phone, is_super_admin`,
+    values,
   );
   return rows[0] ?? null;
 }

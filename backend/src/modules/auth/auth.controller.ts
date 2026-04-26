@@ -7,6 +7,7 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   full_name: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 const loginSchema = z.object({
@@ -23,6 +24,7 @@ export async function handleRegister(req: Request, res: Response, next: NextFunc
       email: result.data.email,
       password: result.data.password,
       fullName: result.data.full_name,
+      phone: result.data.phone,
     });
     res.status(201).json(data);
   } catch (err) {

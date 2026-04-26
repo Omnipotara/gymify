@@ -34,3 +34,14 @@ export interface MemberStatsResponse {
   member_since: string;
   weekly_trend: WeeklyVisit[];
 }
+
+export interface MemberProfileResponse {
+  id: string;
+  email: string;
+  full_name: string | null;
+  phone: string | null;
+  role: 'member' | 'admin';
+  joined_at: string;
+  membership: MyMembershipResponse;
+  stats: MemberStatsResponse;
+}

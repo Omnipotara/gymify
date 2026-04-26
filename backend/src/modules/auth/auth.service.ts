@@ -29,12 +29,13 @@ export async function register(data: {
   email: string;
   password: string;
   fullName?: string;
+  phone?: string;
 }): Promise<AuthResponse> {
   const existing = await repo.findUserByEmail(data.email);
   if (existing) throw new ConflictError('An account with this email already exists');
 
   const passwordHash = await argon2.hash(data.password);
-  const user = await repo.createUser({ email: data.email, passwordHash, fullName: data.fullName });
+  const user = await repo.createUser({ email: data.email, passwordHash, fullName: data.fullName, phone: data.phone });
   return toResponse(user);
 }
 
