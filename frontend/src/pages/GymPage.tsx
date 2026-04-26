@@ -108,6 +108,42 @@ export default function GymPage() {
           </div>
         )}
 
+        {lastCheckIn && (
+          <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800 space-y-1">
+            <p>✓ Checked in at {lastCheckIn}</p>
+            {newRewards.map((r, i) => (
+              <p key={i} className="font-medium">
+                🎉 Reward unlocked: {r.description} ({r.discount_percent}% off)
+              </p>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={() => { setScanning(true); setScanError(''); setLastCheckIn(''); }}
+          disabled={!canCheckIn}
+          className="w-full rounded-xl bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Check In
+        </button>
+
+        {scanning && (
+          <div className="rounded-xl bg-white p-4 shadow space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-700">Point camera at the check-in QR</p>
+              <button onClick={() => setScanning(false)} className="text-xs text-gray-400 hover:text-gray-600">
+                Cancel
+              </button>
+            </div>
+            <QrScanner
+              onScan={(payload) => checkInMutation.mutate(payload)}
+              onError={(err) => setScanError(err.message)}
+            />
+            {scanError && <p className="text-sm text-red-600">{scanError}</p>}
+            {checkInMutation.isPending && <p className="text-sm text-gray-400">Checking in…</p>}
+          </div>
+        )}
+
         {/* Personal stats */}
         {stats && (
           <div className="rounded-xl bg-white px-4 py-4 shadow-sm space-y-4">
@@ -150,17 +186,6 @@ export default function GymPage() {
           </div>
         )}
 
-        {lastCheckIn && (
-          <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800 space-y-1">
-            <p>✓ Checked in at {lastCheckIn}</p>
-            {newRewards.map((r, i) => (
-              <p key={i} className="font-medium">
-                🎉 Reward unlocked: {r.description} ({r.discount_percent}% off)
-              </p>
-            ))}
-          </div>
-        )}
-
         {/* Unredeemed rewards */}
         {rewardsData && rewardsData.items.length > 0 && (
           <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 space-y-1.5">
@@ -172,31 +197,6 @@ export default function GymPage() {
               </div>
             ))}
             <p className="text-xs text-amber-600">Show these to the gym desk to redeem.</p>
-          </div>
-        )}
-
-        <button
-          onClick={() => { setScanning(true); setScanError(''); setLastCheckIn(''); }}
-          disabled={!canCheckIn}
-          className="w-full rounded-xl bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Check In
-        </button>
-
-        {scanning && (
-          <div className="rounded-xl bg-white p-4 shadow space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-700">Point camera at the check-in QR</p>
-              <button onClick={() => setScanning(false)} className="text-xs text-gray-400 hover:text-gray-600">
-                Cancel
-              </button>
-            </div>
-            <QrScanner
-              onScan={(payload) => checkInMutation.mutate(payload)}
-              onError={(err) => setScanError(err.message)}
-            />
-            {scanError && <p className="text-sm text-red-600">{scanError}</p>}
-            {checkInMutation.isPending && <p className="text-sm text-gray-400">Checking in…</p>}
           </div>
         )}
 
