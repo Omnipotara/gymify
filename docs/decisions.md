@@ -4,6 +4,14 @@ A running list of non-obvious decisions and the reasoning behind them. New entri
 
 ---
 
+## 2026-04-26 — Attendance thresholds for Slice 3 analytics
+**Active**: member visited 2+ times in the last 7 days (rolling window).
+**Inactive**: member has an active membership but no visit in the last 14 days.
+**Why**: Simple, understandable thresholds. 2/week is a reasonable minimum for "showing up regularly". 14 days is long enough to be a real warning signal without false-positives from a short holiday.
+**Live queries**: aggregations computed on request — fine at small gym scale.
+
+---
+
 ## 2026-04-26 — Check-in hard-gated behind active membership (Slice 2)
 **Decision**: If a member has no active membership, the check-in endpoint returns an error. No "allow but flag" soft mode.
 **Why**: A soft gate adds complexity (what does "flagged" mean? who sees it?) with no clear payoff. Hard gate is simple and honest — if you haven't paid, you can't check in.
