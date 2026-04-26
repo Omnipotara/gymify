@@ -4,6 +4,18 @@ A running list of non-obvious decisions and the reasoning behind them. New entri
 
 ---
 
+## 2026-04-26 — Slice 4 loyalty system design
+**Reward types**: milestone (N total visits), streak (N consecutive calendar weeks with 2+ visits), comeback (return after N days inactive).
+**Real value**: rewards carry a % discount stored on the record; redemption details TBD.
+**Per-gym rules**: each gym admin configures their own reward rules.
+**Streak**: calendar week (Mon–Sun). Missing a full week resets the streak to 0.
+**Streak trigger**: fires every N consecutive weeks (e.g., threshold=4 → reward at weeks 4, 8, 12).
+**Comeback threshold**: admin-configured per rule; 0 = disabled.
+**Visibility**: both member (unredeemed rewards on gym profile) and admin (full list, mark redeemed) can see rewards.
+**Evaluation**: rewards are evaluated synchronously on every check-in. Failure does not fail the check-in.
+
+---
+
 ## 2026-04-26 — Attendance thresholds for Slice 3 analytics
 **Active**: member visited 2+ times in the last 7 days (rolling window).
 **Inactive**: member has an active membership but no visit in the last 14 days.

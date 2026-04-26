@@ -2,8 +2,9 @@ import { AppError, ConflictError, NotFoundError } from '../../lib/errors';
 import { verifyQrPayload } from '../../lib/qr';
 import { findById } from '../gyms/gyms.repository';
 import { findActiveByUserAndGym } from '../memberships/memberships.repository';
+import { evaluateRewards } from '../rewards/rewards.service';
 import * as repo from './checkins.repository';
-import type { CheckIn } from './checkins.types';
+import type { CheckIn, CheckInResult } from './checkins.types';
 
 const DEDUP_WINDOW_MINUTES = 30;
 
@@ -12,7 +13,7 @@ export async function checkIn(
   userId: string,
   rawPayload: unknown,
   userRole: 'member' | 'admin',
-): Promise<CheckIn> {
+): Promise<CheckInResult> {
   const gym = await findById(gymId);
   if (!gym) throw new NotFoundError();
 
@@ -37,7 +38,14 @@ export async function checkIn(
     throw new ConflictError(`Already checked in within the last ${DEDUP_WINDOW_MINUTES} minutes`);
   }
 
-  return repo.create(gymId, userId);
+  const checkInRecord = await repo.create(gymId, userId);
+  let new_rewards: import('../rewards/rewards.types').RewardSummary[] = [];
+  try {
+    new_rewards = await evaluateRewards(gymId, userId);
+  } catch {
+    // Reward evaluation errors must not fail the check-in
+  }
+  return { ...checkInRecord, new_rewards };
 }
 
 export async function getHistory(

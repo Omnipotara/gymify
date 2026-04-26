@@ -3,11 +3,13 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCheckInHistory, checkIn } from '../features/checkins/api';
 import { getMyMembership, getMemberStats } from '../features/memberships/api';
+import { getMyRewards } from '../features/rewards/api';
 import { getMyGyms } from '../features/gyms/api';
 import { QrScanner } from '../components/QrScanner';
 import { MembershipBadge } from '../components/MembershipBadge';
 import { ApiError } from '../lib/api-client';
 import type { WeeklyVisit } from '../features/memberships/types';
+import type { RewardSummary } from '../features/rewards/types';
 
 const WEEK_LABELS = ['This week', 'Last week', '2 wks ago', '3 wks ago'];
 
@@ -38,6 +40,7 @@ export default function GymPage() {
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState('');
   const [lastCheckIn, setLastCheckIn] = useState('');
+  const [newRewards, setNewRewards] = useState<RewardSummary[]>([]);
 
   const { data: gymsData } = useQuery({ queryKey: ['my-gyms'], queryFn: getMyGyms });
   const gym = gymsData?.gyms.find((g) => g.id === gymId);
@@ -60,14 +63,22 @@ export default function GymPage() {
     enabled: !!gymId,
   });
 
+  const { data: rewardsData } = useQuery({
+    queryKey: ['my-rewards', gymId],
+    queryFn: () => getMyRewards(gymId!),
+    enabled: !!gymId,
+  });
+
   const checkInMutation = useMutation({
     mutationFn: (payload: unknown) => checkIn(gymId!, payload),
     onSuccess: (ci) => {
       queryClient.invalidateQueries({ queryKey: ['check-ins', gymId] });
       queryClient.invalidateQueries({ queryKey: ['member-stats', gymId] });
+      queryClient.invalidateQueries({ queryKey: ['my-rewards', gymId] });
       setScanning(false);
       setScanError('');
       setLastCheckIn(new Date(ci.checked_in_at).toLocaleTimeString());
+      setNewRewards(ci.new_rewards ?? []);
     },
     onError: (err) => {
       setScanError(err instanceof ApiError ? err.message : 'Check-in failed');
@@ -163,8 +174,27 @@ export default function GymPage() {
         )}
 
         {lastCheckIn && (
-          <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
-            ✓ Checked in at {lastCheckIn}
+          <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800 space-y-1">
+            <p>✓ Checked in at {lastCheckIn}</p>
+            {newRewards.map((r, i) => (
+              <p key={i} className="font-medium">
+                🎉 Reward unlocked: {r.description} ({r.discount_percent}% off)
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* Unredeemed rewards */}
+        {rewardsData && rewardsData.items.length > 0 && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 space-y-1.5">
+            <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">Your Rewards</p>
+            {rewardsData.items.map((r) => (
+              <div key={r.id} className="flex items-center justify-between">
+                <span className="text-sm text-amber-900">{r.rule_description}</span>
+                <span className="text-sm font-semibold text-amber-800">{r.discount_percent}% off</span>
+              </div>
+            ))}
+            <p className="text-xs text-amber-600">Show these to the gym desk to redeem.</p>
           </div>
         )}
 

@@ -1,8 +1,11 @@
+import type { RewardSummary } from '../rewards/types';
+
 export interface CheckIn {
   id: string;
   user_id: string;
   gym_id: string;
   checked_in_at: string;
+  new_rewards?: RewardSummary[];
 }
 
 export interface CheckInHistoryResponse {

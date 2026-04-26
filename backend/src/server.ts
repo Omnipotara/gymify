@@ -12,6 +12,7 @@ import { gymsRouter } from './modules/gyms/gyms.routes';
 import { checkinsRouter } from './modules/checkins/checkins.routes';
 import { membershipsRouter } from './modules/memberships/memberships.routes';
 import { dashboardRouter } from './modules/dashboard/dashboard.routes';
+import { rewardsRouter } from './modules/rewards/rewards.routes';
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api/gyms', gymsRouter);
 app.use('/api/gyms/:gymId', checkinsRouter);
 app.use('/api/gyms/:gymId', membershipsRouter);
 app.use('/api/gyms/:gymId', dashboardRouter);
+app.use('/api/gyms/:gymId', rewardsRouter);
 
 // 404 — must come after all routes
 app.use((_req, res) => {
