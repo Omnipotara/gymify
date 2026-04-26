@@ -186,12 +186,12 @@ export default function AdminPage() {
         {data?.items.map((member) => {
           const isActive = member.membership.status === 'active' || member.membership.status === 'expiring_soon';
           return (
-            <div key={member.id} className="rounded-xl bg-white shadow-sm">
-              <div className="flex items-start justify-between">
-                <button
-                  onClick={() => navigate(`/gyms/${gymId}/admin/members/${member.id}`)}
-                  className="flex-1 text-left p-4 hover:bg-gray-50 rounded-l-xl transition-colors"
-                >
+            <div key={member.id} className="rounded-xl bg-white shadow-sm overflow-hidden">
+              <div
+                onClick={() => navigate(`/gyms/${gymId}/admin/members/${member.id}`)}
+                className="p-4 flex items-start justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <div>
                   <p className="text-sm font-medium text-gray-900">
                     {member.full_name ?? member.email}
                   </p>
@@ -203,8 +203,8 @@ export default function AdminPage() {
                       until {member.membership.end_date}
                     </p>
                   )}
-                </button>
-                <div className="flex items-center gap-2 p-4 shrink-0">
+                </div>
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <MembershipBadge status={member.membership.status} />
                   {isActive && (
                     <EndMembershipButton gymId={gymId!} userId={member.id} />
@@ -219,7 +219,7 @@ export default function AdminPage() {
               </div>
 
               {expandedId === member.id && (
-                <div className="px-4 pb-4">
+                <div className="px-4 pb-4 border-t">
                   <MembershipForm
                     gymId={gymId!}
                     member={member}
