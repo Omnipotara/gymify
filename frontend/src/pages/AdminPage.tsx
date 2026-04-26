@@ -261,7 +261,7 @@ export default function AdminPage() {
             </div>
             <div className="rounded-xl bg-white shadow-sm overflow-hidden">
               {!logData || logData.items.length === 0 ? (
-                <p className="text-center text-gray-400 py-8 text-sm">No check-ins yet.</p>
+                <p className="text-center text-gray-400 py-8 text-sm">No check-ins today.</p>
               ) : (
                 <ul className="divide-y max-h-[600px] overflow-y-auto">
                   {logData.items.map((entry) => (

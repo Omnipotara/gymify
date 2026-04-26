@@ -42,6 +42,8 @@ export async function findRecentForGym(gymId: string, limit: number): Promise<Ch
      FROM check_ins ci
      JOIN users u ON u.id = ci.user_id
      WHERE ci.gym_id = $1
+       AND ci.checked_in_at >= CURRENT_DATE
+       AND ci.checked_in_at < CURRENT_DATE + INTERVAL '1 day'
      ORDER BY ci.checked_in_at DESC
      LIMIT $2`,
     [gymId, limit],
