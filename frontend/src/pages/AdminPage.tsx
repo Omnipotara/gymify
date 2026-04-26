@@ -154,6 +154,7 @@ export default function AdminPage() {
   const { gymId } = useParams<{ gymId: string }>();
   const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['members', gymId],
@@ -169,6 +170,15 @@ export default function AdminPage() {
   });
 
   const expiringSoon = data?.items.filter((m) => m.membership.status === 'expiring_soon') ?? [];
+
+  const filteredMembers = data?.items.filter((m) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      (m.full_name ?? '').toLowerCase().includes(q) ||
+      m.email.toLowerCase().includes(q)
+    );
+  }) ?? [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -198,13 +208,26 @@ export default function AdminPage() {
               </div>
             )}
 
-            <h2 className="text-sm font-medium text-gray-500">
-              {data ? `${data.items.length} member${data.items.length !== 1 ? 's' : ''}` : 'Members'}
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-sm font-medium text-gray-500 shrink-0">
+                {data ? `${filteredMembers.length}${search.trim() ? ` of ${data.items.length}` : ''} member${data.items.length !== 1 ? 's' : ''}` : 'Members'}
+              </h2>
+              <input
+                type="text"
+                placeholder="Search by name…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+              />
+            </div>
 
             {isLoading && <p className="text-center text-gray-400 py-8">Loading…</p>}
 
-            {data?.items.map((member) => {
+            {!isLoading && filteredMembers.length === 0 && search.trim() && (
+              <p className="text-center text-gray-400 py-6 text-sm">No members match "{search}".</p>
+            )}
+
+            {filteredMembers.map((member) => {
               const isActive = member.membership.status === 'active' || member.membership.status === 'expiring_soon';
               return (
                 <div key={member.id} className="rounded-xl bg-white shadow-sm overflow-hidden">
