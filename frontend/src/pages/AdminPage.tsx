@@ -171,6 +171,13 @@ export default function AdminPage() {
 
   const expiringSoon = data?.items.filter((m) => m.membership.status === 'expiring_soon') ?? [];
 
+  const duplicateNames = new Set(
+    (data?.items ?? [])
+      .map((m) => m.full_name)
+      .filter((name): name is string => !!name)
+      .filter((name, _, arr) => arr.filter((n) => n === name).length > 1),
+  );
+
   const filteredMembers = data?.items.filter((m) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
@@ -239,7 +246,7 @@ export default function AdminPage() {
                       <p className="text-sm font-medium text-gray-900">
                         {member.full_name ?? member.email}
                       </p>
-                      {member.full_name && (
+                      {(member.full_name && duplicateNames.has(member.full_name)) && (
                         <p className="text-xs text-gray-400">{member.email}</p>
                       )}
                       {member.membership.end_date && (
