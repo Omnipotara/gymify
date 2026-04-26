@@ -3,7 +3,7 @@ import * as service from './checkins.service';
 
 export async function handleCheckIn(req: Request, res: Response, next: NextFunction) {
   try {
-    const checkIn = await service.checkIn(req.params.gymId, req.user!.id, req.body);
+    const checkIn = await service.checkIn(req.params.gymId, req.user!.id, req.body, req.gymRole!);
     res.status(201).json(checkIn);
   } catch (err) {
     next(err);

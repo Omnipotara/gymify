@@ -7,7 +7,12 @@ import type { MembershipWithStatus, MyMembershipResponse } from './memberships.t
 export async function getMyMembership(
   gymId: string,
   userId: string,
+  userRole: 'member' | 'admin',
 ): Promise<MyMembershipResponse> {
+  // Admins have permanent access — always show active with no expiry
+  if (userRole === 'admin') {
+    return { status: 'active', id: null, start_date: null, end_date: null };
+  }
   const membership = await repo.findLatestByUserAndGym(gymId, userId);
   return {
     status: computeMembershipStatus(membership),

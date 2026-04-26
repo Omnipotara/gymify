@@ -11,6 +11,7 @@ export async function checkIn(
   gymId: string,
   userId: string,
   rawPayload: unknown,
+  userRole: 'member' | 'admin',
 ): Promise<CheckIn> {
   const gym = await findById(gymId);
   if (!gym) throw new NotFoundError();
@@ -24,9 +25,11 @@ export async function checkIn(
     throw new ValidationError('Invalid QR code');
   }
 
-  // Enforce active membership
-  const active = await findActiveByUserAndGym(gymId, userId);
-  if (!active) throw new AppError('NO_ACTIVE_MEMBERSHIP', 'No active membership for this gym', 403);
+  // Admins have permanent access — skip membership check
+  if (userRole !== 'admin') {
+    const active = await findActiveByUserAndGym(gymId, userId);
+    if (!active) throw new AppError('NO_ACTIVE_MEMBERSHIP', 'No active membership for this gym', 403);
+  }
 
   // Dedup: reject if already checked in within the window
   const recent = await repo.findRecentByUserAndGym(gymId, userId, DEDUP_WINDOW_MINUTES);

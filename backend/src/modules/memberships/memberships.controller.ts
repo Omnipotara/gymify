@@ -14,7 +14,7 @@ const createSchema = z.object({
 
 export async function handleGetMyMembership(req: Request, res: Response, next: NextFunction) {
   try {
-    const data = await service.getMyMembership(req.params.gymId, req.user!.id);
+    const data = await service.getMyMembership(req.params.gymId, req.user!.id, req.gymRole!);
     res.json(data);
   } catch (err) {
     next(err);
