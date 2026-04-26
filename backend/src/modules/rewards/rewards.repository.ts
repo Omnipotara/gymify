@@ -61,6 +61,14 @@ export async function updateRule(
   return rows[0] ?? null;
 }
 
+export async function deleteRule(gymId: string, ruleId: string): Promise<boolean> {
+  const { rowCount } = await query(
+    'DELETE FROM reward_rules WHERE gym_id = $1 AND id = $2',
+    [gymId, ruleId],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 // ── Evaluation helpers ─────────────────────────────────────────────────────────
 
 export async function getEarnedCount(userId: string, ruleId: string): Promise<number> {

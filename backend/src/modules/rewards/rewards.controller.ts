@@ -22,6 +22,13 @@ export async function handleUpdateRule(req: Request, res: Response, next: NextFu
   } catch (err) { next(err); }
 }
 
+export async function handleDeleteRule(req: Request, res: Response, next: NextFunction) {
+  try {
+    await service.deleteRule(req.params.gymId, req.params.ruleId);
+    res.status(204).end();
+  } catch (err) { next(err); }
+}
+
 export async function handleGetMyRewards(req: Request, res: Response, next: NextFunction) {
   try {
     const rewards = await service.getMyRewards(req.params.gymId, req.user!.id);

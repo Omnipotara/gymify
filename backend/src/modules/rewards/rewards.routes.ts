@@ -3,6 +3,7 @@ import { requireAuth } from '../../middleware/require-auth';
 import { requireGymMembership } from '../../middleware/require-gym-membership';
 import {
   handleCreateRule,
+  handleDeleteRule,
   handleGetAllRewards,
   handleGetMyRewards,
   handleGetRules,
@@ -19,6 +20,7 @@ rewardsRouter.get('/me/rewards', requireAuth, requireGymMembership(), handleGetM
 rewardsRouter.get('/reward-rules', requireAuth, requireGymMembership('admin'), handleGetRules);
 rewardsRouter.post('/reward-rules', requireAuth, requireGymMembership('admin'), handleCreateRule);
 rewardsRouter.patch('/reward-rules/:ruleId', requireAuth, requireGymMembership('admin'), handleUpdateRule);
+rewardsRouter.delete('/reward-rules/:ruleId', requireAuth, requireGymMembership('admin'), handleDeleteRule);
 
 // Admin: member rewards
 rewardsRouter.get('/rewards', requireAuth, requireGymMembership('admin'), handleGetAllRewards);

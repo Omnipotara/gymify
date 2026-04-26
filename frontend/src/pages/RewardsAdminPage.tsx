@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getRules, createRule, toggleRule, getAllRewards, redeemReward } from '../features/rewards/api';
+import { getRules, createRule, updateRule, deleteRule, getAllRewards, redeemReward } from '../features/rewards/api';
 import { ApiError } from '../lib/api-client';
-import type { RewardType, CreateRewardRulePayload } from '../features/rewards/types';
+import type { RewardType, RewardRule, CreateRewardRulePayload } from '../features/rewards/types';
 
 const TYPE_LABELS: Record<RewardType, string> = {
   milestone: 'Milestone',
@@ -23,29 +23,22 @@ function thresholdLabel(type: RewardType, threshold: number): string {
   return threshold === 0 ? 'disabled' : `${threshold} days away`;
 }
 
-function CreateRuleForm({ gymId, onClose }: { gymId: string; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [form, setForm] = useState<CreateRewardRulePayload>({
-    type: 'milestone',
-    threshold: 10,
-    discount_percent: 10,
-    description: '',
-  });
-  const [error, setError] = useState('');
-
-  const mutation = useMutation({
-    mutationFn: () => createRule(gymId, form),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reward-rules', gymId] });
-      onClose();
-    },
-    onError: (err) => setError(err instanceof ApiError ? err.message : 'Failed to create rule'),
-  });
-
+function RuleForm({
+  gymId,
+  initial,
+  onSave,
+  onCancel,
+  saveLabel,
+}: {
+  gymId: string;
+  initial: CreateRewardRulePayload;
+  onSave: (data: CreateRewardRulePayload) => void;
+  onCancel: () => void;
+  saveLabel: string;
+}) {
+  const [form, setForm] = useState<CreateRewardRulePayload>(initial);
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm space-y-3">
-      <p className="text-sm font-semibold text-gray-800">New Reward Rule</p>
-
+    <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs text-gray-500">Type</label>
@@ -91,19 +84,16 @@ function CreateRuleForm({ gymId, onClose }: { gymId: string; onClose: () => void
           />
         </div>
       </div>
-
-      {error && <p className="text-xs text-red-600">{error}</p>}
-
       <div className="flex gap-2">
         <button
-          onClick={() => mutation.mutate()}
-          disabled={mutation.isPending || !form.description.trim()}
+          onClick={() => onSave(form)}
+          disabled={!form.description.trim()}
           className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          {mutation.isPending ? 'Saving…' : 'Create Rule'}
+          {saveLabel}
         </button>
         <button
-          onClick={onClose}
+          onClick={onCancel}
           className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
         >
           Cancel
@@ -113,10 +103,117 @@ function CreateRuleForm({ gymId, onClose }: { gymId: string; onClose: () => void
   );
 }
 
+function RuleCard({ gymId, rule }: { gymId: string; rule: RewardRule }) {
+  const queryClient = useQueryClient();
+  const [mode, setMode] = useState<'view' | 'edit' | 'confirmDelete'>('view');
+  const [error, setError] = useState('');
+
+  const updateMutation = useMutation({
+    mutationFn: (data: CreateRewardRulePayload) => updateRule(gymId, rule.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reward-rules', gymId] });
+      queryClient.invalidateQueries({ queryKey: ['all-rewards', gymId] });
+      setMode('view');
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : 'Failed to save'),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: (is_active: boolean) => updateRule(gymId, rule.id, { is_active }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reward-rules', gymId] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteRule(gymId, rule.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reward-rules', gymId] });
+      queryClient.invalidateQueries({ queryKey: ['all-rewards', gymId] });
+    },
+  });
+
+  return (
+    <div className={`rounded-xl bg-white shadow-sm overflow-hidden ${!rule.is_active && mode === 'view' ? 'opacity-50' : ''}`}>
+      {mode === 'view' && (
+        <div className="p-4 flex items-start justify-between gap-3">
+          <div className="space-y-0.5 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">{rule.description}</p>
+            <p className="text-xs text-gray-500">
+              {TYPE_LABELS[rule.type]} · {thresholdLabel(rule.type, rule.threshold)} · {rule.discount_percent}% off
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => toggleMutation.mutate(!rule.is_active)}
+              disabled={toggleMutation.isPending}
+              className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
+                rule.is_active
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              {rule.is_active ? 'Active' : 'Inactive'}
+            </button>
+            <button
+              onClick={() => { setMode('edit'); setError(''); }}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => setMode('confirmDelete')}
+              className="text-xs text-red-500 hover:underline"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === 'edit' && (
+        <div className="p-4 space-y-3">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Edit Rule</p>
+          <RuleForm
+            gymId={gymId}
+            initial={{ type: rule.type, threshold: rule.threshold, discount_percent: rule.discount_percent, description: rule.description }}
+            onSave={(data) => updateMutation.mutate(data)}
+            onCancel={() => setMode('view')}
+            saveLabel={updateMutation.isPending ? 'Saving…' : 'Save'}
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+        </div>
+      )}
+
+      {mode === 'confirmDelete' && (
+        <div className="p-4 flex items-center justify-between gap-3">
+          <p className="text-sm text-gray-700">
+            Delete <span className="font-medium">"{rule.description}"</span>? This removes all pending rewards earned under this rule.
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+            </button>
+            <button
+              onClick={() => setMode('view')}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function RewardsAdminPage() {
   const { gymId } = useParams<{ gymId: string }>();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   const { data: rulesData, isLoading: rulesLoading } = useQuery({
     queryKey: ['reward-rules', gymId],
@@ -130,10 +227,14 @@ export default function RewardsAdminPage() {
     enabled: !!gymId,
   });
 
-  const toggleMutation = useMutation({
-    mutationFn: ({ ruleId, is_active }: { ruleId: string; is_active: boolean }) =>
-      toggleRule(gymId!, ruleId, is_active),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reward-rules', gymId] }),
+  const createMutation = useMutation({
+    mutationFn: (data: CreateRewardRulePayload) => createRule(gymId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reward-rules', gymId] });
+      setShowCreate(false);
+      setCreateError('');
+    },
+    onError: (err) => setCreateError(err instanceof ApiError ? err.message : 'Failed to create rule'),
   });
 
   const redeemMutation = useMutation({
@@ -159,17 +260,24 @@ export default function RewardsAdminPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium text-gray-500">Reward Rules</h2>
             {!showCreate && (
-              <button
-                onClick={() => setShowCreate(true)}
-                className="text-sm text-blue-600 hover:underline"
-              >
+              <button onClick={() => { setShowCreate(true); setCreateError(''); }} className="text-sm text-blue-600 hover:underline">
                 + New Rule
               </button>
             )}
           </div>
 
           {showCreate && (
-            <CreateRuleForm gymId={gymId!} onClose={() => setShowCreate(false)} />
+            <div className="rounded-xl bg-white p-4 shadow-sm space-y-3">
+              <p className="text-sm font-semibold text-gray-800">New Reward Rule</p>
+              <RuleForm
+                gymId={gymId!}
+                initial={{ type: 'milestone', threshold: 10, discount_percent: 10, description: '' }}
+                onSave={(data) => createMutation.mutate(data)}
+                onCancel={() => setShowCreate(false)}
+                saveLabel={createMutation.isPending ? 'Saving…' : 'Create Rule'}
+              />
+              {createError && <p className="text-xs text-red-600">{createError}</p>}
+            </div>
           )}
 
           {rulesLoading && <p className="text-center text-gray-400 py-4">Loading…</p>}
@@ -181,28 +289,7 @@ export default function RewardsAdminPage() {
           )}
 
           {rulesData?.items.map((rule) => (
-            <div
-              key={rule.id}
-              className={`rounded-xl bg-white p-4 shadow-sm flex items-start justify-between gap-3 ${!rule.is_active ? 'opacity-50' : ''}`}
-            >
-              <div className="space-y-0.5 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{rule.description}</p>
-                <p className="text-xs text-gray-500">
-                  {TYPE_LABELS[rule.type]} · {thresholdLabel(rule.type, rule.threshold)} · {rule.discount_percent}% off
-                </p>
-              </div>
-              <button
-                onClick={() => toggleMutation.mutate({ ruleId: rule.id, is_active: !rule.is_active })}
-                disabled={toggleMutation.isPending}
-                className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
-                  rule.is_active
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }`}
-              >
-                {rule.is_active ? 'Active' : 'Inactive'}
-              </button>
-            </div>
+            <RuleCard key={rule.id} gymId={gymId!} rule={rule} />
           ))}
         </section>
 
@@ -221,16 +308,10 @@ export default function RewardsAdminPage() {
           {pendingRewards.map((reward) => (
             <div key={reward.id} className="rounded-xl bg-white p-4 shadow-sm flex items-start justify-between gap-3">
               <div className="space-y-0.5 min-w-0">
-                <p className="text-sm font-medium text-gray-900">
-                  {reward.member_name ?? reward.member_email}
-                </p>
-                {reward.member_name && (
-                  <p className="text-xs text-gray-400">{reward.member_email}</p>
-                )}
+                <p className="text-sm font-medium text-gray-900">{reward.member_name ?? reward.member_email}</p>
+                {reward.member_name && <p className="text-xs text-gray-400">{reward.member_email}</p>}
                 <p className="text-xs text-gray-600">{reward.rule_description} · {reward.discount_percent}% off</p>
-                <p className="text-xs text-gray-400">
-                  Earned {new Date(reward.earned_at).toLocaleDateString()}
-                </p>
+                <p className="text-xs text-gray-400">Earned {new Date(reward.earned_at).toLocaleDateString()}</p>
               </div>
               <button
                 onClick={() => redeemMutation.mutate(reward.id)}

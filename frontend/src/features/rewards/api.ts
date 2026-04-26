@@ -10,8 +10,11 @@ export const getRules = (gymId: string) =>
 export const createRule = (gymId: string, payload: CreateRewardRulePayload) =>
   api.post<RewardRule>(`/api/gyms/${gymId}/reward-rules`, payload);
 
-export const toggleRule = (gymId: string, ruleId: string, is_active: boolean) =>
-  api.patch<RewardRule>(`/api/gyms/${gymId}/reward-rules/${ruleId}`, { is_active });
+export const updateRule = (gymId: string, ruleId: string, payload: Partial<CreateRewardRulePayload> & { is_active?: boolean }) =>
+  api.patch<RewardRule>(`/api/gyms/${gymId}/reward-rules/${ruleId}`, payload);
+
+export const deleteRule = (gymId: string, ruleId: string) =>
+  api.delete<void>(`/api/gyms/${gymId}/reward-rules/${ruleId}`);
 
 export const getAllRewards = (gymId: string) =>
   api.get<{ items: MyReward[] }>(`/api/gyms/${gymId}/rewards`);

@@ -27,6 +27,11 @@ export async function createRule(gymId: string, data: CreateRewardRulePayload): 
   return repo.createRule(gymId, data);
 }
 
+export async function deleteRule(gymId: string, ruleId: string): Promise<void> {
+  const deleted = await repo.deleteRule(gymId, ruleId);
+  if (!deleted) throw new NotFoundError();
+}
+
 export async function updateRule(
   gymId: string,
   ruleId: string,
