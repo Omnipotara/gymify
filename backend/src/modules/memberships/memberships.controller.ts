@@ -33,18 +33,24 @@ export async function handleEndMembershipForUser(req: Request, res: Response, ne
   }
 }
 
+const patchSchema = z.object({
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+}).refine((d) => d.end_date >= d.start_date, {
+  message: 'end_date must be on or after start_date',
+  path: ['end_date'],
+});
+
 export async function handlePatchMembership(req: Request, res: Response, next: NextFunction) {
   try {
-    const { membershipId } = req.params;
-    const result = z.object({
-      end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
-    }).safeParse(req.body);
+    const result = patchSchema.safeParse(req.body);
     if (!result.success)
       throw new ValidationError('Validation failed', result.error.flatten().fieldErrors as Record<string, string[]>);
 
-    const data = await service.patchMembershipEndDate(
+    const data = await service.patchMembership(
       req.params.gymId,
-      membershipId,
+      req.params.membershipId,
+      result.data.start_date,
       result.data.end_date,
     );
     res.json(data);

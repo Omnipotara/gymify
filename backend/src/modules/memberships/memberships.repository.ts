@@ -59,16 +59,17 @@ export async function endAllNonExpired(gymId: string, userId: string): Promise<v
   );
 }
 
-export async function updateEndDate(
+export async function updateDates(
   gymId: string,
   membershipId: string,
+  startDate: string,
   endDate: string,
 ): Promise<Membership | null> {
   const { rows } = await query<Membership>(
-    `UPDATE memberships SET end_date = $1
-     WHERE id = $2 AND gym_id = $3
+    `UPDATE memberships SET start_date = $1, end_date = $2
+     WHERE id = $3 AND gym_id = $4
      RETURNING ${COLS}`,
-    [endDate, membershipId, gymId],
+    [startDate, endDate, membershipId, gymId],
   );
   return rows[0] ?? null;
 }

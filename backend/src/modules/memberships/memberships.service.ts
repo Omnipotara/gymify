@@ -28,12 +28,13 @@ export async function endMembershipForUser(gymId: string, userId: string): Promi
   await repo.endAllNonExpired(gymId, userId);
 }
 
-export async function patchMembershipEndDate(
+export async function patchMembership(
   gymId: string,
   membershipId: string,
+  startDate: string,
   endDate: string,
 ): Promise<MembershipWithStatus> {
-  const updated = await repo.updateEndDate(gymId, membershipId, endDate);
+  const updated = await repo.updateDates(gymId, membershipId, startDate, endDate);
   if (!updated) throw new NotFoundError('Membership not found');
   return { ...updated, status: computeMembershipStatus(updated) };
 }

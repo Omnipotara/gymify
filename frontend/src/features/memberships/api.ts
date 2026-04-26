@@ -10,8 +10,11 @@ export const getMembers = (gymId: string) =>
 export const createMembership = (gymId: string, payload: CreateMembershipPayload) =>
   api.post<MemberWithStatus>(`/api/gyms/${gymId}/memberships`, payload);
 
-export const patchMembershipEndDate = (gymId: string, membershipId: string, endDate: string) =>
-  api.patch<MemberWithStatus>(`/api/gyms/${gymId}/memberships/${membershipId}`, { end_date: endDate });
+export const patchMembership = (
+  gymId: string,
+  membershipId: string,
+  data: { start_date: string; end_date: string },
+) => api.patch<MemberWithStatus>(`/api/gyms/${gymId}/memberships/${membershipId}`, data);
 
 export const endMembershipsForUser = (gymId: string, userId: string) =>
   api.post<void>(`/api/gyms/${gymId}/memberships/end`, { user_id: userId });

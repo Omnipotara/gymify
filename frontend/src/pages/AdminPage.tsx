@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getMembers, createMembership, patchMembershipEndDate, endMembershipsForUser } from '../features/memberships/api';
+import { getMembers, createMembership, patchMembership, endMembershipsForUser } from '../features/memberships/api';
 import { MembershipBadge } from '../components/MembershipBadge';
 import { ApiError } from '../lib/api-client';
 import type { MemberWithStatus, MembershipStatus } from '../features/memberships/types';
@@ -16,17 +16,7 @@ function addDays(dateStr: string, n: number) {
   return d.toISOString().slice(0, 10);
 }
 
-function smartDefaults(membership: { status: MembershipStatus; end_date: string | null }) {
-  const isActive = membership.status === 'active' || membership.status === 'expiring_soon';
-  if (isActive && membership.end_date) {
-    const start = addDays(membership.end_date, 1);
-    return { start, end: addDays(start, 30) };
-  }
-  const start = today();
-  return { start, end: addDays(start, 30) };
-}
-
-function AddMembershipForm({
+function MembershipForm({
   gymId,
   member,
   onClose,
@@ -36,14 +26,22 @@ function AddMembershipForm({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
-  const defaults = smartDefaults(member.membership);
-  const [startDate, setStartDate] = useState(defaults.start);
-  const [endDate, setEndDate] = useState(defaults.end);
+  const isModify = member.membership.status === 'active' || member.membership.status === 'expiring_soon';
+
+  // Modify: pre-fill from existing record. Add: default to today → +30 days.
+  const [startDate, setStartDate] = useState(
+    isModify && member.membership.start_date ? member.membership.start_date : today(),
+  );
+  const [endDate, setEndDate] = useState(
+    isModify && member.membership.end_date ? member.membership.end_date : addDays(today(), 30),
+  );
   const [error, setError] = useState('');
 
   const mutation = useMutation({
     mutationFn: () =>
-      createMembership(gymId, { user_id: member.id, start_date: startDate, end_date: endDate }),
+      isModify && member.membership.id
+        ? patchMembership(gymId, member.membership.id, { start_date: startDate, end_date: endDate })
+        : createMembership(gymId, { user_id: member.id, start_date: startDate, end_date: endDate }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members', gymId] });
       onClose();
@@ -51,12 +49,10 @@ function AddMembershipForm({
     onError: (err) => setError(err instanceof ApiError ? err.message : 'Failed to save'),
   });
 
-  const isExtending = member.membership.status === 'active' || member.membership.status === 'expiring_soon';
-
   return (
     <div className="mt-3 border-t pt-3 space-y-3">
       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-        {isExtending ? 'Extend Membership' : 'Add Membership'}
+        {isModify ? 'Modify Membership' : 'Add Membership'}
       </p>
       <div className="flex gap-2">
         <div className="flex-1">
@@ -205,13 +201,13 @@ export default function AdminPage() {
                     onClick={() => setExpandedId(expandedId === member.id ? null : member.id)}
                     className="text-xs text-blue-600 hover:underline whitespace-nowrap"
                   >
-                    {expandedId === member.id ? 'Cancel' : isActive ? 'Extend' : '+ Add'}
+                    {expandedId === member.id ? 'Cancel' : isActive ? 'Modify' : '+ Add'}
                   </button>
                 </div>
               </div>
 
               {expandedId === member.id && (
-                <AddMembershipForm
+                <MembershipForm
                   gymId={gymId!}
                   member={member}
                   onClose={() => setExpandedId(null)}
