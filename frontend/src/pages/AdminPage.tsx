@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getMembers, createMembership } from '../features/memberships/api';
+import { getMembers, createMembership, patchMembershipEndDate } from '../features/memberships/api';
 import { MembershipBadge } from '../components/MembershipBadge';
 import { ApiError } from '../lib/api-client';
 import type { MemberWithStatus, MembershipStatus } from '../features/memberships/types';
@@ -99,6 +99,53 @@ function AddMembershipForm({
   );
 }
 
+function EndMembershipButton({
+  gymId,
+  membershipId,
+}: {
+  gymId: string;
+  membershipId: string;
+}) {
+  const queryClient = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: () => {
+      // Set end_date to yesterday so the membership is immediately expired
+      const yesterday = addDays(today(), -1);
+      return patchMembershipEndDate(gymId, membershipId, yesterday);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members', gymId] });
+      setConfirming(false);
+    },
+  });
+
+  if (confirming) {
+    return (
+      <span className="flex items-center gap-1">
+        <span className="text-xs text-gray-500">End now?</span>
+        <button
+          onClick={() => mutation.mutate()}
+          disabled={mutation.isPending}
+          className="text-xs text-red-600 hover:underline disabled:opacity-50"
+        >
+          {mutation.isPending ? '…' : 'Yes'}
+        </button>
+        <button onClick={() => setConfirming(false)} className="text-xs text-gray-400 hover:underline">
+          No
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <button onClick={() => setConfirming(true)} className="text-xs text-red-500 hover:underline">
+      End
+    </button>
+  );
+}
+
 export default function AdminPage() {
   const { gymId } = useParams<{ gymId: string }>();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -154,6 +201,9 @@ export default function AdminPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <MembershipBadge status={member.membership.status} />
+                  {isActive && member.membership.id && (
+                    <EndMembershipButton gymId={gymId!} membershipId={member.membership.id} />
+                  )}
                   <button
                     onClick={() => setExpandedId(expandedId === member.id ? null : member.id)}
                     className="text-xs text-blue-600 hover:underline whitespace-nowrap"

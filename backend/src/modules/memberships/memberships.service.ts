@@ -22,6 +22,16 @@ export async function getMyMembership(
   };
 }
 
+export async function patchMembershipEndDate(
+  gymId: string,
+  membershipId: string,
+  endDate: string,
+): Promise<MembershipWithStatus> {
+  const updated = await repo.updateEndDate(gymId, membershipId, endDate);
+  if (!updated) throw new NotFoundError('Membership not found');
+  return { ...updated, status: computeMembershipStatus(updated) };
+}
+
 export async function createMembership(
   gymId: string,
   adminId: string,

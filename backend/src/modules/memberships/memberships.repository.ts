@@ -33,6 +33,20 @@ export async function findActiveByUserAndGym(
   return rows[0] ?? null;
 }
 
+export async function updateEndDate(
+  gymId: string,
+  membershipId: string,
+  endDate: string,
+): Promise<Membership | null> {
+  const { rows } = await query<Membership>(
+    `UPDATE memberships SET end_date = $1
+     WHERE id = $2 AND gym_id = $3
+     RETURNING ${COLS}`,
+    [endDate, membershipId, gymId],
+  );
+  return rows[0] ?? null;
+}
+
 export async function create(data: {
   gymId: string;
   userId: string;

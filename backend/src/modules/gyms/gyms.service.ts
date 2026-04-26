@@ -13,6 +13,7 @@ export async function getMembers(gymId: string): Promise<MemberWithStatus[]> {
     role: r.role,
     joined_at: r.joined_at,
     membership: {
+      id: r.membership_id,
       status: computeMembershipStatus(
         r.membership_start_date && r.membership_end_date
           ? { start_date: r.membership_start_date, end_date: r.membership_end_date }

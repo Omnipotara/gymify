@@ -14,6 +14,7 @@ export interface MemberWithStatus {
   role: 'member' | 'admin';
   joined_at: string;
   membership: {
+    id: string | null;
     status: MembershipStatus;
     start_date: string | null;
     end_date: string | null;

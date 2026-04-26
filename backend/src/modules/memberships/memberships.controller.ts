@@ -21,6 +21,26 @@ export async function handleGetMyMembership(req: Request, res: Response, next: N
   }
 }
 
+export async function handlePatchMembership(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { membershipId } = req.params;
+    const result = z.object({
+      end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    }).safeParse(req.body);
+    if (!result.success)
+      throw new ValidationError('Validation failed', result.error.flatten().fieldErrors as Record<string, string[]>);
+
+    const data = await service.patchMembershipEndDate(
+      req.params.gymId,
+      membershipId,
+      result.data.end_date,
+    );
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function handleCreateMembership(req: Request, res: Response, next: NextFunction) {
   try {
     const result = createSchema.safeParse(req.body);
