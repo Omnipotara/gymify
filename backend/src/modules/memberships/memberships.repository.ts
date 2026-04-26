@@ -3,7 +3,16 @@ import type { Membership } from './memberships.types';
 
 const COLS = 'id, user_id, gym_id, start_date::text, end_date::text, created_by, created_at::text';
 
-/** Most recent membership for a user at a gym (any status). Used for status display. */
+/**
+ * Returns the most relevant membership for status display:
+ * 1. Currently active (today between start and end)
+ * 2. Most recently expired
+ * 3. Future (not yet started) — only if nothing else exists
+ *
+ * Sorting by end_date DESC alone breaks when a future membership has a
+ * later end_date than a currently active one — it would shadow the active
+ * record and return status 'none'.
+ */
 export async function findLatestByUserAndGym(
   gymId: string,
   userId: string,
@@ -11,7 +20,14 @@ export async function findLatestByUserAndGym(
   const { rows } = await query<Membership>(
     `SELECT ${COLS} FROM memberships
      WHERE gym_id = $1 AND user_id = $2
-     ORDER BY end_date DESC LIMIT 1`,
+     ORDER BY
+       CASE
+         WHEN start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE THEN 0
+         WHEN end_date < CURRENT_DATE THEN 1
+         ELSE 2
+       END,
+       end_date DESC
+     LIMIT 1`,
     [gymId, userId],
   );
   return rows[0] ?? null;

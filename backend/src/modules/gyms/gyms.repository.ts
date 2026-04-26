@@ -38,7 +38,13 @@ export async function getMembers(gymId: string): Promise<MemberRow[]> {
        SELECT id, start_date, end_date
        FROM memberships
        WHERE user_id = ug.user_id AND gym_id = ug.gym_id
-       ORDER BY end_date DESC
+       ORDER BY
+         CASE
+           WHEN start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE THEN 0
+           WHEN end_date < CURRENT_DATE THEN 1
+           ELSE 2
+         END,
+         end_date DESC
        LIMIT 1
      ) latest ON true
      WHERE ug.gym_id = $1
