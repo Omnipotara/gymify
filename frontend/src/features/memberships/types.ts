@@ -30,3 +30,17 @@ export interface CreateMembershipPayload {
   start_date: string;
   end_date: string;
 }
+
+export interface WeeklyVisit {
+  week_offset: number;
+  visits: number;
+}
+
+export interface MemberStatsResponse {
+  total_visits: number;
+  visits_last_30_days: number;
+  visits_this_week: number;
+  days_until_expiry: number | null;
+  member_since: string;
+  weekly_trend: WeeklyVisit[];
+}

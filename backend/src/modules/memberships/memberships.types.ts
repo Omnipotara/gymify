@@ -20,3 +20,17 @@ export interface MyMembershipResponse {
   start_date: string | null;
   end_date: string | null;
 }
+
+export interface WeeklyVisit {
+  week_offset: number; // 0 = this week, 1 = last week, etc.
+  visits: number;
+}
+
+export interface MemberStatsResponse {
+  total_visits: number;
+  visits_last_30_days: number;
+  visits_this_week: number;
+  days_until_expiry: number | null;
+  member_since: string;
+  weekly_trend: WeeklyVisit[];
+}

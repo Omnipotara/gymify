@@ -2,7 +2,7 @@ import { NotFoundError } from '../../lib/errors';
 import { computeMembershipStatus } from '../../lib/membership-status';
 import { findUserGym } from '../gyms/gyms.repository';
 import * as repo from './memberships.repository';
-import type { MembershipWithStatus, MyMembershipResponse } from './memberships.types';
+import type { MembershipWithStatus, MyMembershipResponse, MemberStatsResponse } from './memberships.types';
 
 export async function getMyMembership(
   gymId: string,
@@ -19,6 +19,26 @@ export async function getMyMembership(
     id: membership?.id ?? null,
     start_date: membership?.start_date ?? null,
     end_date: membership?.end_date ?? null,
+  };
+}
+
+export async function getMemberStats(
+  gymId: string,
+  userId: string,
+  userRole: 'member' | 'admin',
+): Promise<MemberStatsResponse> {
+  const [stats, weekly_trend] = await Promise.all([
+    repo.getMemberStats(gymId, userId),
+    repo.getWeeklyTrend(gymId, userId),
+  ]);
+  return {
+    total_visits: stats.total_visits,
+    visits_last_30_days: stats.visits_last_30_days,
+    visits_this_week: stats.visits_this_week,
+    // Admins have permanent access — no expiry date to show
+    days_until_expiry: userRole === 'admin' ? null : stats.days_until_expiry,
+    member_since: stats.member_since,
+    weekly_trend,
   };
 }
 

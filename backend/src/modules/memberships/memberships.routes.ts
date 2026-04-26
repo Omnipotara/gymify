@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/require-auth';
 import { requireGymMembership } from '../../middleware/require-gym-membership';
-import { handleGetMyMembership, handleCreateMembership, handlePatchMembership, handleEndMembershipForUser } from './memberships.controller';
+import { handleGetMemberStats, handleGetMyMembership, handleCreateMembership, handlePatchMembership, handleEndMembershipForUser } from './memberships.controller';
 
 export const membershipsRouter = Router({ mergeParams: true });
+
+// Member: personal stats at this gym
+membershipsRouter.get('/me/stats', requireAuth, requireGymMembership(), handleGetMemberStats);
 
 // Member: get own membership status
 membershipsRouter.get('/me/membership', requireAuth, requireGymMembership(), handleGetMyMembership);

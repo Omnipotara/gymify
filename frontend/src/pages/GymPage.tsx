@@ -2,11 +2,35 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCheckInHistory, checkIn } from '../features/checkins/api';
-import { getMyMembership } from '../features/memberships/api';
+import { getMyMembership, getMemberStats } from '../features/memberships/api';
 import { getMyGyms } from '../features/gyms/api';
 import { QrScanner } from '../components/QrScanner';
 import { MembershipBadge } from '../components/MembershipBadge';
 import { ApiError } from '../lib/api-client';
+import type { WeeklyVisit } from '../features/memberships/types';
+
+const WEEK_LABELS = ['This week', 'Last week', '2 wks ago', '3 wks ago'];
+
+function WeeklyTrendBars({ trend }: { trend: WeeklyVisit[] }) {
+  const max = Math.max(...trend.map((w) => w.visits), 1);
+  // Display oldest → newest (left to right)
+  const ordered = [...trend].reverse();
+  return (
+    <div className="flex items-end gap-1.5 h-10">
+      {ordered.map((w) => {
+        const label = WEEK_LABELS[3 - w.week_offset];
+        const pct = (w.visits / max) * 100;
+        return (
+          <div key={w.week_offset} className="flex flex-col items-center gap-0.5 flex-1">
+            <span className="text-xs font-medium text-gray-600">{w.visits}</span>
+            <div className="w-full rounded-t-sm bg-blue-400" style={{ height: `${Math.max(pct * 0.28, w.visits > 0 ? 4 : 1)}px` }} />
+            <span className="text-[10px] text-gray-400 text-center leading-tight whitespace-nowrap">{label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function GymPage() {
   const { gymId } = useParams<{ gymId: string }>();
@@ -24,6 +48,12 @@ export default function GymPage() {
     enabled: !!gymId,
   });
 
+  const { data: stats } = useQuery({
+    queryKey: ['member-stats', gymId],
+    queryFn: () => getMemberStats(gymId!),
+    enabled: !!gymId,
+  });
+
   const { data: history, isLoading } = useQuery({
     queryKey: ['check-ins', gymId],
     queryFn: () => getCheckInHistory(gymId!),
@@ -34,6 +64,7 @@ export default function GymPage() {
     mutationFn: (payload: unknown) => checkIn(gymId!, payload),
     onSuccess: (ci) => {
       queryClient.invalidateQueries({ queryKey: ['check-ins', gymId] });
+      queryClient.invalidateQueries({ queryKey: ['member-stats', gymId] });
       setScanning(false);
       setScanError('');
       setLastCheckIn(new Date(ci.checked_in_at).toLocaleTimeString());
@@ -54,7 +85,7 @@ export default function GymPage() {
         </div>
         {gym?.role === 'admin' && (
           <Link to={`/gyms/${gymId}/admin`} className="text-sm text-blue-600 hover:underline">
-            Admin Dashboard →
+            Admin →
           </Link>
         )}
       </header>
@@ -73,7 +104,7 @@ export default function GymPage() {
           </div>
         )}
 
-        {/* No membership warning */}
+        {/* Expired / no membership warning */}
         {membership && (membership.status === 'expired' || membership.status === 'none') && (
           <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
             {membership.status === 'expired'
@@ -86,6 +117,48 @@ export default function GymPage() {
         {membership?.status === 'expiring_soon' && (
           <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
             Your membership expires on {membership.end_date}. Contact the gym to renew soon.
+          </div>
+        )}
+
+        {/* Personal stats */}
+        {stats && (
+          <div className="rounded-xl bg-white px-4 py-4 shadow-sm space-y-4">
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{stats.visits_this_week}</p>
+                <p className="text-xs text-gray-400 mt-0.5">This week</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{stats.visits_last_30_days}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Last 30 days</p>
+              </div>
+              <div>
+                {stats.days_until_expiry !== null ? (
+                  <>
+                    <p className={`text-2xl font-bold ${stats.days_until_expiry <= 3 ? 'text-amber-500' : 'text-gray-900'}`}>
+                      {stats.days_until_expiry}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">Days left</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-gray-900">{stats.total_visits}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Total visits</p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {stats.weekly_trend.length > 0 && (
+              <WeeklyTrendBars trend={stats.weekly_trend} />
+            )}
+
+            <p className="text-xs text-gray-400 text-center">
+              Member since {new Date(stats.member_since).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              {stats.days_until_expiry !== null && (
+                <> · {stats.total_visits} visits total</>
+              )}
+            </p>
           </div>
         )}
 

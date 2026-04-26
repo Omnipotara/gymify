@@ -1,5 +1,5 @@
 import { query } from '../../db/client';
-import type { Membership } from './memberships.types';
+import type { Membership, WeeklyVisit } from './memberships.types';
 
 const COLS = 'id, user_id, gym_id, start_date::text, end_date::text, created_by, created_at::text';
 
@@ -72,6 +72,60 @@ export async function updateDates(
     [startDate, endDate, membershipId, gymId],
   );
   return rows[0] ?? null;
+}
+
+interface StatsRow {
+  total_visits: number;
+  visits_last_30_days: number;
+  visits_this_week: number;
+  days_until_expiry: number | null;
+  member_since: string;
+}
+
+export async function getMemberStats(gymId: string, userId: string): Promise<StatsRow> {
+  const { rows } = await query<StatsRow>(`
+    SELECT
+      (SELECT COUNT(*)::int FROM check_ins
+       WHERE gym_id = $1 AND user_id = $2) AS total_visits,
+      (SELECT COUNT(*)::int FROM check_ins
+       WHERE gym_id = $1 AND user_id = $2
+         AND checked_in_at >= NOW() - INTERVAL '30 days') AS visits_last_30_days,
+      (SELECT COUNT(*)::int FROM check_ins
+       WHERE gym_id = $1 AND user_id = $2
+         AND checked_in_at >= NOW() - INTERVAL '7 days') AS visits_this_week,
+      (SELECT (end_date - CURRENT_DATE)::int FROM memberships
+       WHERE gym_id = $1 AND user_id = $2
+         AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE
+       ORDER BY end_date DESC LIMIT 1) AS days_until_expiry,
+      (SELECT joined_at::text FROM user_gyms
+       WHERE gym_id = $1 AND user_id = $2) AS member_since
+  `, [gymId, userId]);
+  return rows[0];
+}
+
+export async function getWeeklyTrend(gymId: string, userId: string): Promise<WeeklyVisit[]> {
+  const { rows } = await query<WeeklyVisit>(`
+    WITH weeks AS (SELECT generate_series(0, 3) AS week_offset),
+    counts AS (
+      SELECT
+        CASE
+          WHEN checked_in_at >= NOW() - INTERVAL '7 days'  THEN 0
+          WHEN checked_in_at >= NOW() - INTERVAL '14 days' THEN 1
+          WHEN checked_in_at >= NOW() - INTERVAL '21 days' THEN 2
+          ELSE 3
+        END AS week_offset,
+        COUNT(*)::int AS visits
+      FROM check_ins
+      WHERE gym_id = $1 AND user_id = $2
+        AND checked_in_at >= NOW() - INTERVAL '28 days'
+      GROUP BY 1
+    )
+    SELECT w.week_offset, COALESCE(c.visits, 0) AS visits
+    FROM weeks w
+    LEFT JOIN counts c ON c.week_offset = w.week_offset
+    ORDER BY w.week_offset
+  `, [gymId, userId]);
+  return rows;
 }
 
 export async function create(data: {

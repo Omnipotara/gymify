@@ -12,6 +12,15 @@ const createSchema = z.object({
   path: ['end_date'],
 });
 
+export async function handleGetMemberStats(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = await service.getMemberStats(req.params.gymId, req.user!.id, req.gymRole!);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function handleGetMyMembership(req: Request, res: Response, next: NextFunction) {
   try {
     const data = await service.getMyMembership(req.params.gymId, req.user!.id, req.gymRole!);

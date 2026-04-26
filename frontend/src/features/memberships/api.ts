@@ -1,8 +1,11 @@
 import { api } from '../../lib/api-client';
-import type { MyMembershipResponse, MembersResponse, CreateMembershipPayload, MemberWithStatus } from './types';
+import type { MyMembershipResponse, MembersResponse, CreateMembershipPayload, MemberWithStatus, MemberStatsResponse } from './types';
 
 export const getMyMembership = (gymId: string) =>
   api.get<MyMembershipResponse>(`/api/gyms/${gymId}/me/membership`);
+
+export const getMemberStats = (gymId: string) =>
+  api.get<MemberStatsResponse>(`/api/gyms/${gymId}/me/stats`);
 
 export const getMembers = (gymId: string) =>
   api.get<MembersResponse>(`/api/gyms/${gymId}/members`);
