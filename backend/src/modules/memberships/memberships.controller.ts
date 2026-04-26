@@ -21,6 +21,18 @@ export async function handleGetMyMembership(req: Request, res: Response, next: N
   }
 }
 
+export async function handleEndMembershipForUser(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = z.object({ user_id: z.string().uuid() }).safeParse(req.body);
+    if (!result.success)
+      throw new ValidationError('Validation failed', result.error.flatten().fieldErrors as Record<string, string[]>);
+    await service.endMembershipForUser(req.params.gymId, result.data.user_id);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function handlePatchMembership(req: Request, res: Response, next: NextFunction) {
   try {
     const { membershipId } = req.params;

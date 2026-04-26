@@ -22,6 +22,12 @@ export async function getMyMembership(
   };
 }
 
+export async function endMembershipForUser(gymId: string, userId: string): Promise<void> {
+  const userGym = await findUserGym(userId, gymId);
+  if (!userGym) throw new NotFoundError('User is not a member of this gym');
+  await repo.endAllNonExpired(gymId, userId);
+}
+
 export async function patchMembershipEndDate(
   gymId: string,
   membershipId: string,

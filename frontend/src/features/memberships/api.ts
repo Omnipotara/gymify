@@ -12,3 +12,6 @@ export const createMembership = (gymId: string, payload: CreateMembershipPayload
 
 export const patchMembershipEndDate = (gymId: string, membershipId: string, endDate: string) =>
   api.patch<MemberWithStatus>(`/api/gyms/${gymId}/memberships/${membershipId}`, { end_date: endDate });
+
+export const endMembershipsForUser = (gymId: string, userId: string) =>
+  api.post<void>(`/api/gyms/${gymId}/memberships/end`, { user_id: userId });

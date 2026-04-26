@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getMembers, createMembership, patchMembershipEndDate } from '../features/memberships/api';
+import { getMembers, createMembership, patchMembershipEndDate, endMembershipsForUser } from '../features/memberships/api';
 import { MembershipBadge } from '../components/MembershipBadge';
 import { ApiError } from '../lib/api-client';
 import type { MemberWithStatus, MembershipStatus } from '../features/memberships/types';
@@ -101,20 +101,17 @@ function AddMembershipForm({
 
 function EndMembershipButton({
   gymId,
-  membershipId,
+  userId,
 }: {
   gymId: string;
-  membershipId: string;
+  userId: string;
 }) {
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: () => {
-      // Set end_date to yesterday so the membership is immediately expired
-      const yesterday = addDays(today(), -1);
-      return patchMembershipEndDate(gymId, membershipId, yesterday);
-    },
+    // Ends ALL active and future memberships for this user in one shot
+    mutationFn: () => endMembershipsForUser(gymId, userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members', gymId] });
       setConfirming(false);
@@ -201,8 +198,8 @@ export default function AdminPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <MembershipBadge status={member.membership.status} />
-                  {isActive && member.membership.id && (
-                    <EndMembershipButton gymId={gymId!} membershipId={member.membership.id} />
+                  {isActive && (
+                    <EndMembershipButton gymId={gymId!} userId={member.id} />
                   )}
                   <button
                     onClick={() => setExpandedId(expandedId === member.id ? null : member.id)}

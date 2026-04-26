@@ -49,6 +49,16 @@ export async function findActiveByUserAndGym(
   return rows[0] ?? null;
 }
 
+/** Ends all memberships that haven't expired yet (active + future) for a user at a gym. */
+export async function endAllNonExpired(gymId: string, userId: string): Promise<void> {
+  await query(
+    `UPDATE memberships
+     SET end_date = CURRENT_DATE - INTERVAL '1 day'
+     WHERE gym_id = $1 AND user_id = $2 AND end_date >= CURRENT_DATE`,
+    [gymId, userId],
+  );
+}
+
 export async function updateEndDate(
   gymId: string,
   membershipId: string,
