@@ -1,0 +1,287 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('./rewards.repository');
+
+import * as repo from './rewards.repository';
+import { evaluateRewards } from './rewards.service';
+import type { RewardRule, MemberReward } from './rewards.types';
+
+const GYM_ID = 'gym-1';
+const USER_ID = 'user-1';
+
+// Returns the ISO date string for the Monday of the week N weeks ago (UTC)
+function weekOf(weeksAgo: number): string {
+  const now = new Date();
+  const dow = now.getUTCDay();
+  const daysFromMonday = dow === 0 ? 6 : dow - 1;
+  const monday = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysFromMonday - weeksAgo * 7),
+  );
+  return monday.toISOString().slice(0, 10);
+}
+
+function makeRule(overrides: Partial<RewardRule>): RewardRule {
+  return {
+    id: 'rule-1',
+    gym_id: GYM_ID,
+    type: 'milestone',
+    threshold: 10,
+    discount_percent: 10,
+    description: 'Test reward',
+    is_active: true,
+    created_at: new Date(),
+    ...overrides,
+  };
+}
+
+const mockGranted: MemberReward = {
+  id: 'mr-1',
+  user_id: USER_ID,
+  gym_id: GYM_ID,
+  rule_id: 'rule-1',
+  earned_at: new Date(),
+  redeemed_at: null,
+  redeemed_by: null,
+};
+
+beforeEach(() => vi.clearAllMocks());
+
+// ── General ────────────────────────────────────────────────────────────────────
+
+describe('evaluateRewards — general', () => {
+  it('returns an empty array and skips all other queries when there are no active rules', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([]);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.getTotalVisits).not.toHaveBeenCalled();
+    expect(repo.getEarnedCount).not.toHaveBeenCalled();
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+
+  it('returns summaries for all rules that trigger in the same call', async () => {
+    const milestoneRule = makeRule({ id: 'rule-1', type: 'milestone', threshold: 5 });
+    const streakRule = makeRule({ id: 'rule-2', type: 'streak', threshold: 2 });
+    vi.mocked(repo.getActiveRules).mockResolvedValue([milestoneRule, streakRule]);
+    vi.mocked(repo.getTotalVisits).mockResolvedValue(5);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(0);
+    vi.mocked(repo.getQualifyingWeeks).mockResolvedValue([weekOf(0), weekOf(1)]);
+    vi.mocked(repo.grantReward).mockResolvedValue(mockGranted);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toHaveLength(2);
+    expect(repo.grantReward).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ── Milestone ──────────────────────────────────────────────────────────────────
+
+describe('evaluateRewards — milestone rule', () => {
+  it('grants the reward the first time the visit threshold is reached', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ threshold: 10 })]);
+    vi.mocked(repo.getTotalVisits).mockResolvedValue(10);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(0);
+    vi.mocked(repo.grantReward).mockResolvedValue(mockGranted);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].description).toBe('Test reward');
+    expect(repo.grantReward).toHaveBeenCalledOnce();
+  });
+
+  it('does not grant again when the reward has already been earned', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ threshold: 10 })]);
+    vi.mocked(repo.getTotalVisits).mockResolvedValue(15);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(1); // already earned once
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+
+  it('does not grant when visits are below the threshold', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ threshold: 10 })]);
+    vi.mocked(repo.getTotalVisits).mockResolvedValue(9);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(0);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+});
+
+// ── Streak ─────────────────────────────────────────────────────────────────────
+
+describe('evaluateRewards — streak rule', () => {
+  it('grants when consecutive weeks equal the threshold', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ type: 'streak', threshold: 3 })]);
+    vi.mocked(repo.getQualifyingWeeks).mockResolvedValue([weekOf(0), weekOf(1), weekOf(2)]);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(0);
+    vi.mocked(repo.grantReward).mockResolvedValue(mockGranted);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toHaveLength(1);
+    expect(repo.grantReward).toHaveBeenCalledOnce();
+  });
+
+  it('grants again when streak crosses the next multiple of the threshold', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ type: 'streak', threshold: 3 })]);
+    vi.mocked(repo.getQualifyingWeeks).mockResolvedValue([
+      weekOf(0), weekOf(1), weekOf(2), weekOf(3), weekOf(4), weekOf(5),
+    ]); // 6-week streak → floor(6/3) = 2
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(1); // earned once already
+    vi.mocked(repo.grantReward).mockResolvedValue(mockGranted);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toHaveLength(1);
+  });
+
+  it('does not grant when already earned at the current multiple', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ type: 'streak', threshold: 3 })]);
+    vi.mocked(repo.getQualifyingWeeks).mockResolvedValue([weekOf(0), weekOf(1), weekOf(2)]);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(1); // floor(3/3) = 1, already earned
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+
+  it('counts only up to the first gap in consecutive weeks', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ type: 'streak', threshold: 3 })]);
+    // Week 0 (this week) and week 2 (2 weeks ago) — week 1 is missing
+    vi.mocked(repo.getQualifyingWeeks).mockResolvedValue([weekOf(0), weekOf(2)]);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(0);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    // Streak = 1 (break after this week), floor(1/3) = 0, not > earnedCount (0)
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+
+  it('returns streak 0 when the most recent qualifying week is older than last week', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ type: 'streak', threshold: 1 })]);
+    // Both weeks are from 2+ weeks ago — streak is broken
+    vi.mocked(repo.getQualifyingWeeks).mockResolvedValue([weekOf(2), weekOf(3)]);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(0);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+
+  it('does not grant when there are no qualifying weeks', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ type: 'streak', threshold: 1 })]);
+    vi.mocked(repo.getQualifyingWeeks).mockResolvedValue([]);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(0);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+
+  it('skips a streak rule with threshold 0', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ type: 'streak', threshold: 0 })]);
+    vi.mocked(repo.getQualifyingWeeks).mockResolvedValue([weekOf(0), weekOf(1)]);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(0);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+});
+
+// ── Comeback ───────────────────────────────────────────────────────────────────
+
+describe('evaluateRewards — comeback rule', () => {
+  const comebackRule = makeRule({ type: 'comeback', threshold: 14 });
+
+  it('grants when the gap since last visit meets the threshold', async () => {
+    const prevCheckIn = {
+      id: 'ci-prev',
+      user_id: USER_ID,
+      gym_id: GYM_ID,
+      checked_in_at: new Date(Date.now() - 20 * 86_400_000), // 20 days ago
+    };
+    vi.mocked(repo.getActiveRules).mockResolvedValue([comebackRule]);
+    vi.mocked(repo.getPreviousCheckIn).mockResolvedValue(prevCheckIn);
+    vi.mocked(repo.getLastRewardEarnedAt).mockResolvedValue(null);
+    vi.mocked(repo.grantReward).mockResolvedValue(mockGranted);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toHaveLength(1);
+    expect(repo.grantReward).toHaveBeenCalledOnce();
+  });
+
+  it('does not grant when the gap is below the threshold', async () => {
+    const prevCheckIn = {
+      id: 'ci-prev',
+      user_id: USER_ID,
+      gym_id: GYM_ID,
+      checked_in_at: new Date(Date.now() - 10 * 86_400_000), // only 10 days ago
+    };
+    vi.mocked(repo.getActiveRules).mockResolvedValue([comebackRule]);
+    vi.mocked(repo.getPreviousCheckIn).mockResolvedValue(prevCheckIn);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+
+  it('does not grant again when already rewarded after the comeback visit', async () => {
+    const prevCheckIn = {
+      id: 'ci-prev',
+      user_id: USER_ID,
+      gym_id: GYM_ID,
+      checked_in_at: new Date(Date.now() - 20 * 86_400_000), // 20 days ago
+    };
+    const lastEarnedAt = new Date(Date.now() - 5 * 86_400_000); // earned 5 days ago (after comeback)
+
+    vi.mocked(repo.getActiveRules).mockResolvedValue([comebackRule]);
+    vi.mocked(repo.getPreviousCheckIn).mockResolvedValue(prevCheckIn);
+    vi.mocked(repo.getLastRewardEarnedAt).mockResolvedValue(lastEarnedAt);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+
+  it('does not grant when there is no previous check-in (first visit)', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([comebackRule]);
+    vi.mocked(repo.getPreviousCheckIn).mockResolvedValue(null);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+
+  it('skips a comeback rule with threshold 0', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ type: 'comeback', threshold: 0 })]);
+    vi.mocked(repo.getPreviousCheckIn).mockResolvedValue({
+      id: 'ci-prev',
+      user_id: USER_ID,
+      gym_id: GYM_ID,
+      checked_in_at: new Date(Date.now() - 30 * 86_400_000),
+    });
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+});
