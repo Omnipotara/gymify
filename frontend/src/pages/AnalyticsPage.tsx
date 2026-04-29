@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -39,15 +39,7 @@ export default function AnalyticsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white px-4 py-3 flex items-center gap-3">
-        <Link to={`/gyms/${gymId}/admin`} className="text-sm text-blue-600 hover:underline">
-          ← Members
-        </Link>
-        <h1 className="text-lg font-semibold text-gray-900">Analytics</h1>
-      </header>
-
-      <main className="mx-auto max-w-3xl p-4 space-y-6">
+    <main className="mx-auto max-w-3xl p-4 space-y-6">
         {isLoading && <p className="text-center text-gray-400 py-12">Loading…</p>}
 
         {data && (
@@ -170,6 +162,5 @@ export default function AnalyticsPage() {
           </>
         )}
       </main>
-    </div>
   );
 }

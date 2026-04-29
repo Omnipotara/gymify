@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import QRCode from 'react-qr-code';
 import { getMembers, createMembership, patchMembership, endMembershipsForUser } from '../features/memberships/api';
@@ -241,23 +241,7 @@ export default function AdminPage() {
   }) ?? [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white px-4 py-3 flex items-center gap-3">
-        <Link to={`/gyms/${gymId}`} className="text-sm text-blue-600 hover:underline">
-          ← Member View
-        </Link>
-        <h1 className="text-lg font-semibold text-gray-900">Members</h1>
-        <div className="ml-auto flex items-center gap-4">
-          <Link to={`/gyms/${gymId}/admin/rewards`} className="text-sm text-blue-600 hover:underline">
-            Rewards
-          </Link>
-          <Link to={`/gyms/${gymId}/admin/analytics`} className="text-sm text-blue-600 hover:underline">
-            Analytics →
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl p-4">
+    <main className="mx-auto max-w-5xl p-4">
         <div className="flex gap-4 items-start">
           {/* ── Members column ── */}
           <div className="flex-1 min-w-0 space-y-3">
@@ -390,6 +374,5 @@ export default function AdminPage() {
           </div>
         </div>
       </main>
-    </div>
   );
 }

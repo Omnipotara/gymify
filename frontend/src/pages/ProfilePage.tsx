@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -42,13 +41,7 @@ export default function ProfilePage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white px-4 py-3 flex items-center gap-3">
-        <Link to="/gyms" className="text-sm text-blue-600 hover:underline">← My Gyms</Link>
-        <h1 className="text-lg font-semibold text-gray-900">My Profile</h1>
-      </header>
-
-      <main className="mx-auto max-w-sm p-4 space-y-4">
+    <main className="mx-auto max-w-sm p-4 space-y-4">
         {isLoading && <p className="text-center text-gray-400 py-8">Loading…</p>}
 
         {me && (
@@ -103,6 +96,5 @@ export default function ProfilePage() {
           </div>
         )}
       </main>
-    </div>
   );
 }

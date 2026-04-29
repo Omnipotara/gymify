@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../lib/auth-context';
 import { getMyGyms, joinGym } from '../features/gyms/api';
 import { QrScanner } from '../components/QrScanner';
 import { ApiError } from '../lib/api-client';
 
 export default function GymListPage() {
-  const { user, logout } = useAuth();
   const queryClient = useQueryClient();
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState('');
@@ -30,19 +28,7 @@ export default function GymListPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-gray-900">My Gyms</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">{user?.email}</span>
-          <Link to="/profile" className="text-sm text-blue-600 hover:underline">Profile</Link>
-          <button onClick={logout} className="text-sm text-red-500 hover:text-red-700">
-            Sign out
-          </button>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-lg p-4 space-y-4">
+    <main className="mx-auto max-w-lg p-4 space-y-4">
         {isLoading && <p className="text-center text-gray-400 py-8">Loading…</p>}
 
         {data?.gyms.length === 0 && (
@@ -88,6 +74,5 @@ export default function GymListPage() {
           </div>
         )}
       </main>
-    </div>
   );
 }

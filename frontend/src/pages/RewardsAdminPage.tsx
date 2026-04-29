@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getRules, createRule, updateRule, deleteRule, getAllRewards, redeemReward } from '../features/rewards/api';
 import { ApiError } from '../lib/api-client';
@@ -246,15 +246,7 @@ export default function RewardsAdminPage() {
   const redeemedRewards = rewardsData?.items.filter((r) => r.redeemed_at) ?? [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white px-4 py-3 flex items-center gap-3">
-        <Link to={`/gyms/${gymId}/admin`} className="text-sm text-blue-600 hover:underline">
-          ← Members
-        </Link>
-        <h1 className="text-lg font-semibold text-gray-900">Loyalty Rewards</h1>
-      </header>
-
-      <main className="mx-auto max-w-lg p-4 space-y-6">
+    <main className="mx-auto max-w-lg p-4 space-y-6">
         {/* ── Reward Rules ── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
@@ -341,6 +333,5 @@ export default function RewardsAdminPage() {
           </section>
         )}
       </main>
-    </div>
   );
 }

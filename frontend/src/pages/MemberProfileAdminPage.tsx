@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getMemberProfile } from '../features/users/api';
 import { MembershipBadge } from '../components/MembershipBadge';
@@ -14,17 +14,7 @@ export default function MemberProfileAdminPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white px-4 py-3 flex items-center gap-3">
-        <Link to={`/gyms/${gymId}/admin`} className="text-sm text-blue-600 hover:underline">
-          ← Members
-        </Link>
-        <h1 className="text-lg font-semibold text-gray-900">
-          {data ? (data.full_name ?? data.email) : 'Member Profile'}
-        </h1>
-      </header>
-
-      <main className="mx-auto max-w-lg p-4 space-y-4">
+    <main className="mx-auto max-w-lg p-4 space-y-4">
         {isLoading && <p className="text-center text-gray-400 py-8">Loading…</p>}
 
         {data && (
@@ -83,6 +73,5 @@ export default function MemberProfileAdminPage() {
           </>
         )}
       </main>
-    </div>
   );
 }

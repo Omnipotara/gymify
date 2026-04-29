@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCheckInHistory, checkIn } from '../features/checkins/api';
 import { getMyMembership, getMemberStats } from '../features/memberships/api';
@@ -10,6 +10,7 @@ import { MembershipBadge } from '../components/MembershipBadge';
 import { WeeklyTrendBars } from '../components/WeeklyTrendBars';
 import { ApiError } from '../lib/api-client';
 import type { RewardSummary } from '../features/rewards/types';
+
 
 export default function GymPage() {
   const { gymId } = useParams<{ gymId: string }>();
@@ -64,21 +65,13 @@ export default function GymPage() {
 
   const canCheckIn = membership?.status === 'active' || membership?.status === 'expiring_soon';
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/gyms" className="text-sm text-blue-600 hover:underline">← My Gyms</Link>
-          <h1 className="text-lg font-semibold text-gray-900">{gym?.name ?? 'Gym'}</h1>
-        </div>
-        {gym?.role === 'admin' && (
-          <Link to={`/gyms/${gymId}/admin`} className="text-sm text-blue-600 hover:underline">
-            Admin →
-          </Link>
-        )}
-      </header>
+  // Admins go to the admin panel — they don't use the member check-in view
+  if (gymsData && gym?.role === 'admin') {
+    return <Navigate to={`/gyms/${gymId}/admin`} replace />;
+  }
 
-      <main className="mx-auto max-w-lg p-4 space-y-4">
+  return (
+    <main className="mx-auto max-w-lg p-4 space-y-4">
         {/* Membership status */}
         {membership && (
           <div className="rounded-xl bg-white px-4 py-3 shadow-sm flex items-center justify-between">
@@ -213,6 +206,5 @@ export default function GymPage() {
           ))}
         </div>
       </main>
-    </div>
   );
 }

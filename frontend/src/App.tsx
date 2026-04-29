@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { RequireAuth } from './components/RequireAuth';
+import AppLayout from './components/AppLayout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import GymListPage from './pages/GymListPage';
@@ -14,64 +15,11 @@ import CheckinDisplayPage from './pages/CheckinDisplayPage';
 export default function App() {
   return (
     <Routes>
+      {/* Public */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route
-        path="/gyms"
-        element={
-          <RequireAuth>
-            <GymListPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/gyms/:gymId"
-        element={
-          <RequireAuth>
-            <GymPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/gyms/:gymId/admin"
-        element={
-          <RequireAuth>
-            <AdminPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/gyms/:gymId/admin/analytics"
-        element={
-          <RequireAuth>
-            <AnalyticsPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/gyms/:gymId/admin/rewards"
-        element={
-          <RequireAuth>
-            <RewardsAdminPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <RequireAuth>
-            <ProfilePage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/gyms/:gymId/admin/members/:userId"
-        element={
-          <RequireAuth>
-            <MemberProfileAdminPage />
-          </RequireAuth>
-        }
-      />
+
+      {/* Check-in display — full-screen, no sidebar */}
       <Route
         path="/gyms/:gymId/checkin-display"
         element={
@@ -80,6 +28,24 @@ export default function App() {
           </RequireAuth>
         }
       />
+
+      {/* All other protected pages use the sidebar layout */}
+      <Route
+        element={
+          <RequireAuth>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/gyms" element={<GymListPage />} />
+        <Route path="/gyms/:gymId" element={<GymPage />} />
+        <Route path="/gyms/:gymId/admin" element={<AdminPage />} />
+        <Route path="/gyms/:gymId/admin/analytics" element={<AnalyticsPage />} />
+        <Route path="/gyms/:gymId/admin/rewards" element={<RewardsAdminPage />} />
+        <Route path="/gyms/:gymId/admin/members/:userId" element={<MemberProfileAdminPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+      </Route>
+
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
