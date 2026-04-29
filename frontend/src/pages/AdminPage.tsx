@@ -242,7 +242,7 @@ export default function AdminPage() {
 
   return (
     <main className="mx-auto max-w-5xl p-4">
-        <div className="flex gap-4 items-start">
+        <div className="flex gap-8 items-start">
           {/* ── Members column ── */}
           <div className="flex-1 min-w-0 space-y-3">
             {/* QR Codes section */}
@@ -347,12 +347,12 @@ export default function AdminPage() {
           </div>
 
           {/* ── Live check-in log ── */}
-          <div className="w-72 shrink-0 space-y-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-medium text-gray-500">Live Check-ins</h2>
-              <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-            </div>
+          <div className="w-72 shrink-0">
             <div className="rounded-xl bg-white shadow-sm overflow-hidden">
+              <div className="px-4 py-3 flex items-center gap-2 border-b border-gray-100">
+                <h2 className="text-sm font-medium text-gray-700">Live Check-ins</h2>
+                <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+              </div>
               {!logData || logData.items.length === 0 ? (
                 <p className="text-center text-gray-400 py-8 text-sm">No check-ins today.</p>
               ) : (
