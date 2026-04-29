@@ -1,5 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
+import { ValidationError } from '../../lib/errors';
 import * as service from './users.service';
+
+const updateMeSchema = z.object({
+  full_name: z.string().max(100).nullable().optional(),
+  phone: z.string().max(30).nullable().optional(),
+});
 
 export async function handleGetMe(req: Request, res: Response, next: NextFunction) {
   try {
@@ -21,8 +28,10 @@ export async function handleGetMyGyms(req: Request, res: Response, next: NextFun
 
 export async function handleUpdateMe(req: Request, res: Response, next: NextFunction) {
   try {
-    const { full_name, phone } = req.body as { full_name?: string | null; phone?: string | null };
-    const user = await service.updateMe(req.user!.id, { full_name, phone });
+    const result = updateMeSchema.safeParse(req.body);
+    if (!result.success)
+      throw new ValidationError('Validation failed', result.error.flatten().fieldErrors as Record<string, string[]>);
+    const user = await service.updateMe(req.user!.id, result.data);
     res.json(user);
   } catch (err) {
     next(err);

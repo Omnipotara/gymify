@@ -22,7 +22,8 @@ export async function handleGetGymLog(req: Request, res: Response, next: NextFun
 export async function handleGetHistory(req: Request, res: Response, next: NextFunction) {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 100);
-    const before = typeof req.query.before === 'string' ? req.query.before : undefined;
+    const rawBefore = typeof req.query.before === 'string' ? req.query.before : undefined;
+    const before = rawBefore && !isNaN(Date.parse(rawBefore)) ? rawBefore : undefined;
     const data = await service.getHistory(req.params.gymId, req.user!.id, limit, before);
     res.json(data);
   } catch (err) {

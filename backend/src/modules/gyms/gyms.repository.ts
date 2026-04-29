@@ -1,4 +1,5 @@
 import { query } from '../../db/client';
+import { decryptSecret } from '../../lib/crypto';
 import type { Gym, MemberWithStatus } from './gyms.types';
 
 type MemberRow = Omit<MemberWithStatus, 'membership'> & {
@@ -12,7 +13,12 @@ export async function findById(gymId: string): Promise<Gym | null> {
     'SELECT id, name, slug, join_qr_secret, checkin_qr_secret, created_at FROM gyms WHERE id = $1',
     [gymId],
   );
-  return rows[0] ?? null;
+  if (!rows[0]) return null;
+  return {
+    ...rows[0],
+    join_qr_secret: decryptSecret(rows[0].join_qr_secret),
+    checkin_qr_secret: decryptSecret(rows[0].checkin_qr_secret),
+  };
 }
 
 export async function findUserGym(

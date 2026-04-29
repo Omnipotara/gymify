@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { query } from '../db/client';
 import { NotFoundError, ForbiddenError } from '../lib/errors';
+import { logger } from '../lib/logger';
 
 /**
  * Verifies the authenticated user is a member (or admin) of req.params.gymId.
@@ -26,6 +27,10 @@ export function requireGymMembership(role?: 'admin') {
       req.gymRole = rows[0].role as 'member' | 'admin';
 
       if (role === 'admin' && req.gymRole !== 'admin') {
+        logger.warn(
+          { security: true, event: 'access_denied', userId, gymId, requiredRole: role, actualRole: req.gymRole },
+          'Admin route accessed by non-admin',
+        );
         next(new ForbiddenError());
         return;
       }

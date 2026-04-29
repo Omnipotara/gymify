@@ -27,14 +27,14 @@ if (!config.isTest) {
   app.use(pinoHttp({ logger }));
 }
 
-// Body parsing
-app.use(express.json());
+// Body parsing — 16 kb cap prevents large-payload DoS
+app.use(express.json({ limit: '16kb' }));
 
-// Global rate limit — specific endpoints will apply stricter limits
+// Global rate limit — specific endpoints apply stricter limits
 app.use(
   rateLimit({
     windowMs: 60 * 1000,
-    max: 100,
+    max: 60,
     standardHeaders: true,
     legacyHeaders: false,
   }),
