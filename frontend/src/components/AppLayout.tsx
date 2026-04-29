@@ -109,7 +109,7 @@ export default function AppLayout() {
       </nav>
 
       {/* Page content */}
-      <div className="ml-52 flex-1 min-h-screen bg-gray-50">
+      <div className="ml-52 flex-1 min-h-screen bg-gray-50 pt-6">
         <Outlet />
       </div>
     </div>
