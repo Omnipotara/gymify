@@ -1,4 +1,5 @@
 import { query } from '../../db/client';
+import { decryptField } from '../../lib/crypto';
 import type { Membership, WeeklyVisit } from './memberships.types';
 
 const COLS = 'id, user_id, gym_id, start_date::text, end_date::text, created_by, created_at::text';
@@ -139,7 +140,8 @@ export async function findMemberInfo(
      WHERE u.id = $2`,
     [gymId, userId],
   );
-  return rows[0] ?? null;
+  if (!rows[0]) return null;
+  return { ...rows[0], phone: decryptField(rows[0].phone) };
 }
 
 export async function create(data: {

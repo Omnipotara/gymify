@@ -1,4 +1,5 @@
 import { query } from '../../db/client';
+import { encryptField, decryptField } from '../../lib/crypto';
 import type { MeResponse, GymSummary } from './users.types';
 
 export async function findById(id: string): Promise<MeResponse | null> {
@@ -6,7 +7,8 @@ export async function findById(id: string): Promise<MeResponse | null> {
     'SELECT id, email, full_name, phone, is_super_admin FROM users WHERE id = $1',
     [id],
   );
-  return rows[0] ?? null;
+  if (!rows[0]) return null;
+  return { ...rows[0], phone: decryptField(rows[0].phone) };
 }
 
 export async function updateProfile(
@@ -17,7 +19,7 @@ export async function updateProfile(
   const values: unknown[] = [id];
   let idx = 2;
   if ('full_name' in patch) { setClauses.push(`full_name = $${idx++}`); values.push(patch.full_name ?? null); }
-  if ('phone' in patch) { setClauses.push(`phone = $${idx++}`); values.push(patch.phone ?? null); }
+  if ('phone' in patch) { setClauses.push(`phone = $${idx++}`); values.push(encryptField(patch.phone)); }
   if (setClauses.length === 0) return findById(id);
 
   const { rows } = await query<MeResponse>(
@@ -26,7 +28,8 @@ export async function updateProfile(
      RETURNING id, email, full_name, phone, is_super_admin`,
     values,
   );
-  return rows[0] ?? null;
+  if (!rows[0]) return null;
+  return { ...rows[0], phone: decryptField(rows[0].phone) };
 }
 
 export async function findGymsByUserId(userId: string): Promise<GymSummary[]> {

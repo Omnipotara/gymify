@@ -16,6 +16,18 @@ export function encryptSecret(plaintext: string): string {
   return `${PREFIX}${iv.toString('hex')}:${authTag.toString('hex')}:${ciphertext.toString('hex')}`;
 }
 
+/** Encrypt a nullable field (e.g. phone). Returns null when value is null/undefined. */
+export function encryptField(value: string | null | undefined): string | null {
+  if (value == null || value === '') return null;
+  return encryptSecret(value);
+}
+
+/** Decrypt a nullable field. Returns null when value is null/undefined. */
+export function decryptField(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  return decryptSecret(value);
+}
+
 /**
  * Decrypts a value produced by encryptSecret.
  * Falls back to returning the value as-is for backward compatibility with
