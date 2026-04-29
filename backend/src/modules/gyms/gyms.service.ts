@@ -1,8 +1,8 @@
 import { NotFoundError } from '../../lib/errors';
-import { verifyQrPayload } from '../../lib/qr';
+import { verifyQrPayload, signQrPayload, signRotatingCheckinPayload } from '../../lib/qr';
 import { computeMembershipStatus } from '../../lib/membership-status';
 import * as repo from './gyms.repository';
-import type { JoinResponse, MemberWithStatus } from './gyms.types';
+import type { JoinResponse, MemberWithStatus, QrPayloadResponse, RotatingQrPayloadResponse } from './gyms.types';
 
 export async function getMembers(gymId: string): Promise<MemberWithStatus[]> {
   const rows = await repo.getMembers(gymId);
@@ -23,6 +23,23 @@ export async function getMembers(gymId: string): Promise<MemberWithStatus[]> {
       end_date: r.membership_end_date,
     },
   }));
+}
+
+export async function getJoinQrPayload(gymId: string): Promise<QrPayloadResponse> {
+  const gym = await repo.findById(gymId);
+  if (!gym) throw new NotFoundError();
+  const payload = signQrPayload('join', gymId, gym.join_qr_secret);
+  return { payload: payload as unknown as Record<string, unknown> };
+}
+
+export async function getCheckinQrPayload(gymId: string): Promise<RotatingQrPayloadResponse> {
+  const gym = await repo.findById(gymId);
+  if (!gym) throw new NotFoundError();
+  const payload = signRotatingCheckinPayload(gymId, gym.checkin_qr_secret);
+  return {
+    payload: payload as unknown as Record<string, unknown>,
+    expires_at: payload.ts + 30_000,
+  };
 }
 
 export async function joinGym(userId: string, rawPayload: unknown): Promise<JoinResponse> {

@@ -1,3 +1,12 @@
+export interface QrPayloadResponse {
+  payload: Record<string, unknown>;
+}
+
+export interface RotatingQrPayloadResponse {
+  payload: Record<string, unknown>;
+  expires_at: number;
+}
+
 export interface GymSummary {
   id: string;
   name: string;

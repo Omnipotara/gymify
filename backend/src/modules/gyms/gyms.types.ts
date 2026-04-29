@@ -16,6 +16,15 @@ export interface JoinResponse {
   };
 }
 
+export interface QrPayloadResponse {
+  payload: Record<string, unknown>;
+}
+
+export interface RotatingQrPayloadResponse {
+  payload: Record<string, unknown>;
+  expires_at: number;
+}
+
 import type { MembershipStatus } from '../../lib/membership-status';
 
 export interface MemberWithStatus {

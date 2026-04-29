@@ -18,3 +18,21 @@ export async function handleJoin(req: Request, res: Response, next: NextFunction
     next(err);
   }
 }
+
+export async function handleGetJoinQr(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = await service.getJoinQrPayload(req.params.gymId);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleGetCheckinQr(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = await service.getCheckinQrPayload(req.params.gymId);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
