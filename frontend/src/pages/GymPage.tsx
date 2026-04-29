@@ -140,7 +140,7 @@ export default function GymPage() {
         {/* Personal stats */}
         {stats && (
           <div className="rounded-xl bg-white px-6 py-6 shadow-sm space-y-5 mt-2">
-            <div className="grid grid-cols-3 gap-6 text-center">
+            <div className="grid grid-cols-3 gap-3 sm:gap-6 text-center">
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.visits_this_week}</p>
                 <p className="text-xs text-gray-400 mt-0.5">This week</p>

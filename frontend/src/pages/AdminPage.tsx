@@ -242,13 +242,13 @@ export default function AdminPage() {
 
   return (
     <main className="mx-auto max-w-5xl p-4">
-        <div className="flex gap-8 items-start">
+        <div className="flex flex-col gap-6 lg:flex-row lg:gap-8 lg:items-start">
           {/* ── Members column ── */}
           <div className="flex-1 min-w-0 space-y-3">
             {/* QR Codes section */}
             <div className="rounded-xl bg-white shadow-sm overflow-hidden">
-              <div className="px-4 py-3 flex items-center justify-between">
-                <p className="text-sm font-medium text-gray-700">QR Codes</p>
+              <div className="px-4 py-3 flex flex-wrap items-center gap-3">
+                <p className="text-sm font-medium text-gray-700 mr-auto">QR Codes</p>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => window.open(`/gyms/${gymId}/checkin-display`, '_blank')}
@@ -347,7 +347,7 @@ export default function AdminPage() {
           </div>
 
           {/* ── Live check-in log ── */}
-          <div className="w-72 shrink-0">
+          <div className="w-full lg:w-72 lg:shrink-0">
             <div className="rounded-xl bg-white shadow-sm overflow-hidden">
               <div className="px-4 py-3 flex items-center gap-2 border-b border-gray-100">
                 <h2 className="text-sm font-medium text-gray-700">Live Check-ins</h2>
