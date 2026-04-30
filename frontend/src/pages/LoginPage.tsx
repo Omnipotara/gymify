@@ -18,7 +18,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await login({ email, password });
-      setAuth(res.token, res.user);
+      setAuth(res.user);
       navigate('/gyms', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong');

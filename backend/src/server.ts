@@ -1,6 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import pinoHttp from 'pino-http';
 import rateLimit from 'express-rate-limit';
 import { config } from './config';
@@ -19,13 +20,19 @@ const app = express();
 // Security headers
 app.use(helmet());
 
-// CORS
+// CORS — credentials: true is required for cookies to be sent cross-origin in dev
 app.use(cors({ origin: config.allowedOrigin, credentials: true }));
+
+// Cookie parser — must come before routes so req.cookies is populated
+app.use(cookieParser());
 
 // Request logging (skip in test environment)
 if (!config.isTest) {
   app.use(pinoHttp({ logger }));
 }
+
+// Trust one reverse-proxy hop (nginx / Cloudflare) so req.ip reflects the real client IP.
+app.set('trust proxy', 1);
 
 // Body parsing — 16 kb cap prevents large-payload DoS
 app.use(express.json({ limit: '16kb' }));

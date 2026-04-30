@@ -213,13 +213,14 @@ export default function AdminPage() {
     queryKey: ['members', gymId],
     queryFn: () => getMembers(gymId!),
     enabled: !!gymId,
+    refetchInterval: 15_000,  // picks up new members joining via QR
   });
 
   const { data: logData } = useQuery({
     queryKey: ['gym-checkin-log', gymId],
     queryFn: () => getGymCheckInLog(gymId!),
     enabled: !!gymId,
-    refetchInterval: 5000,
+    refetchInterval: 5_000,   // check-ins are more time-sensitive
   });
 
   const expiringSoon = data?.items.filter((m) => m.membership.status === 'expiring_soon') ?? [];
@@ -279,8 +280,9 @@ export default function AdminPage() {
             )}
 
             <div className="flex items-center gap-3">
-              <h2 className="text-sm font-medium text-gray-500 shrink-0">
+              <h2 className="text-sm font-medium text-gray-500 shrink-0 flex items-center gap-1.5">
                 {data ? `${filteredMembers.length}${search.trim() ? ` of ${data.items.length}` : ''} member${data.items.length !== 1 ? 's' : ''}` : 'Members'}
+                <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" title="Auto-updating" />
               </h2>
               <input
                 type="text"

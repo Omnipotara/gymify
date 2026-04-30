@@ -10,14 +10,12 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem('token');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options?.headers as Record<string, string>),
   };
 
-  const res = await fetch(path, { ...options, headers });
+  const res = await fetch(path, { ...options, headers, credentials: 'include' });
 
   if (res.status === 204) return undefined as T;
 
@@ -25,8 +23,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     if (res.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      // Notify auth context to clear user state — cookie is HttpOnly so JS can't touch it
+      window.dispatchEvent(new Event('auth:unauthorized'));
     }
     throw new ApiError(body.error?.code ?? 'UNKNOWN', body.error?.message ?? 'Request failed', res.status);
   }

@@ -11,14 +11,14 @@ interface JwtPayload {
 }
 
 export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
-  const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
+  const token = req.cookies?.token as string | undefined;
+  if (!token) {
     next(new UnauthorizedError());
     return;
   }
 
   try {
-    const payload = jwt.verify(header.slice(7), config.jwtSecret, {
+    const payload = jwt.verify(token, config.jwtSecret, {
       algorithms: ['HS256'],
     }) as JwtPayload;
     req.user = { id: payload.sub, email: payload.email, is_super_admin: payload.is_super_admin };

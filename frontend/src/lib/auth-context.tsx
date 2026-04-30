@@ -12,7 +12,7 @@ interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  login: (token: string, user: AuthUser) => void;
+  login: (user: AuthUser) => void;
   logout: () => void;
 }
 
@@ -23,30 +23,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    // Validate session by hitting /api/me — the HttpOnly cookie is sent automatically.
     api
       .get<AuthUser>('/api/me')
       .then(setUser)
       .catch((err) => {
-        if (err instanceof ApiError && err.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+        // 401 just means no valid session — not an error worth logging
+        if (!(err instanceof ApiError && err.status === 401)) {
+          console.error('Failed to restore session', err);
         }
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback((token: string, u: AuthUser) => {
-    localStorage.setItem('token', token);
+  useEffect(() => {
+    // api-client dispatches this when any request gets a 401 mid-session
+    const handleUnauthorized = () => setUser(null);
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, []);
+
+  const login = useCallback((u: AuthUser) => {
     setUser(u);
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('token');
+    api.post('/api/auth/logout', {}).catch(() => {});
     setUser(null);
   }, []);
 

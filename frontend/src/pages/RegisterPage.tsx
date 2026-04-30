@@ -22,7 +22,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const res = await register({ email, password, full_name: fullName || undefined, phone });
-      setAuth(res.token, res.user);
+      setAuth(res.user);
       navigate('/gyms', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong');

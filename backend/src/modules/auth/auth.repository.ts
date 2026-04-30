@@ -12,6 +12,15 @@ export async function findUserByEmail(email: string): Promise<DbUser | null> {
   return rows[0] ?? null;
 }
 
+/** Returns true if the user is an admin of any gym (used to set lockout threshold). */
+export async function isUserAdmin(userId: string): Promise<boolean> {
+  const { rows } = await query<{ exists: boolean }>(
+    `SELECT EXISTS(SELECT 1 FROM user_gyms WHERE user_id = $1 AND role = 'admin') AS exists`,
+    [userId],
+  );
+  return rows[0]?.exists ?? false;
+}
+
 export async function createUser(data: {
   email: string;
   passwordHash: string;
