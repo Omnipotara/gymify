@@ -284,4 +284,142 @@ describe('evaluateRewards — comeback rule', () => {
     expect(result).toEqual([]);
     expect(repo.grantReward).not.toHaveBeenCalled();
   });
+
+  it('grants when the gap is exactly at the threshold (>= not >)', async () => {
+    vi.useFakeTimers();
+    const THRESHOLD = 14;
+    const now = Date.now();
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ type: 'comeback', threshold: THRESHOLD })]);
+    vi.mocked(repo.getPreviousCheckIn).mockResolvedValue({
+      id: 'ci-prev',
+      user_id: USER_ID,
+      gym_id: GYM_ID,
+      checked_in_at: new Date(now - THRESHOLD * 86_400_000), // exactly 14 days ago
+    });
+    vi.mocked(repo.getLastRewardEarnedAt).mockResolvedValue(null);
+    vi.mocked(repo.grantReward).mockResolvedValue(mockGranted);
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toHaveLength(1);
+    vi.useRealTimers();
+  });
+});
+
+// ── Milestone — single-grant semantics ────────────────────────────────────────
+
+describe('evaluateRewards — milestone single-grant semantics', () => {
+  it('does not re-grant at 2x the threshold — milestone rewards are one-time only', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ threshold: 10 })]);
+    vi.mocked(repo.getTotalVisits).mockResolvedValue(20); // 2× threshold
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(1);  // already granted once
+
+    const result = await evaluateRewards(GYM_ID, USER_ID);
+
+    expect(result).toEqual([]);
+    expect(repo.grantReward).not.toHaveBeenCalled();
+  });
+
+  it('grants on first visit that hits the threshold, not before', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ threshold: 10 })]);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(0);
+
+    // One below the threshold — no grant
+    vi.mocked(repo.getTotalVisits).mockResolvedValue(9);
+    expect(await evaluateRewards(GYM_ID, USER_ID)).toEqual([]);
+
+    // Exactly at the threshold — grants
+    vi.mocked(repo.getTotalVisits).mockResolvedValue(10);
+    vi.mocked(repo.grantReward).mockResolvedValue(mockGranted);
+    expect(await evaluateRewards(GYM_ID, USER_ID)).toHaveLength(1);
+  });
+});
+
+// ── grantReward failure propagation ───────────────────────────────────────────
+
+describe('evaluateRewards — grantReward DB failure', () => {
+  it('propagates grantReward errors (callers like checkIn are responsible for swallowing)', async () => {
+    vi.mocked(repo.getActiveRules).mockResolvedValue([makeRule({ type: 'milestone', threshold: 5 })]);
+    vi.mocked(repo.getTotalVisits).mockResolvedValue(5);
+    vi.mocked(repo.getEarnedCount).mockResolvedValue(0);
+    vi.mocked(repo.grantReward).mockRejectedValue(new Error('DB write failed'));
+
+    await expect(evaluateRewards(GYM_ID, USER_ID)).rejects.toThrow('DB write failed');
+  });
+});
+
+// ── Rule management validation ─────────────────────────────────────────────────
+
+import { createRule, deleteRule, redeemReward } from './rewards.service';
+import { ValidationError, NotFoundError } from '../../lib/errors';
+
+describe('createRule — input validation', () => {
+  const validPayload = {
+    type: 'milestone' as const,
+    threshold: 10,
+    discount_percent: 15,
+    description: 'Visit 10 times',
+  };
+
+  it('throws ValidationError for an unknown rule type', async () => {
+    await expect(createRule(GYM_ID, { ...validPayload, type: 'unknown' as never }))
+      .rejects.toThrow(ValidationError);
+  });
+
+  it('throws ValidationError when threshold is negative', async () => {
+    await expect(createRule(GYM_ID, { ...validPayload, threshold: -1 }))
+      .rejects.toThrow(ValidationError);
+  });
+
+  it('accepts threshold of 0 (valid — streak/milestone with 0 is a no-op but valid to create)', async () => {
+    vi.mocked(repo.createRule).mockResolvedValue(makeRule({ threshold: 0 }));
+    await expect(createRule(GYM_ID, { ...validPayload, threshold: 0 })).resolves.toBeDefined();
+  });
+
+  it('throws ValidationError when discount_percent is 0', async () => {
+    await expect(createRule(GYM_ID, { ...validPayload, discount_percent: 0 }))
+      .rejects.toThrow(ValidationError);
+  });
+
+  it('throws ValidationError when discount_percent exceeds 100', async () => {
+    await expect(createRule(GYM_ID, { ...validPayload, discount_percent: 101 }))
+      .rejects.toThrow(ValidationError);
+  });
+
+  it('accepts discount_percent at the boundaries (1 and 100)', async () => {
+    vi.mocked(repo.createRule).mockResolvedValue(makeRule({ discount_percent: 1 }));
+    await expect(createRule(GYM_ID, { ...validPayload, discount_percent: 1 })).resolves.toBeDefined();
+
+    vi.mocked(repo.createRule).mockResolvedValue(makeRule({ discount_percent: 100 }));
+    await expect(createRule(GYM_ID, { ...validPayload, discount_percent: 100 })).resolves.toBeDefined();
+  });
+
+  it('throws ValidationError when description is empty', async () => {
+    await expect(createRule(GYM_ID, { ...validPayload, description: '' }))
+      .rejects.toThrow(ValidationError);
+  });
+
+  it('throws ValidationError when description is whitespace only', async () => {
+    await expect(createRule(GYM_ID, { ...validPayload, description: '   ' }))
+      .rejects.toThrow(ValidationError);
+  });
+});
+
+describe('deleteRule', () => {
+  it('throws NotFoundError when the rule does not exist', async () => {
+    vi.mocked(repo.deleteRule).mockResolvedValue(false);
+    await expect(deleteRule(GYM_ID, 'nonexistent')).rejects.toThrow(NotFoundError);
+  });
+
+  it('resolves without error when the rule exists', async () => {
+    vi.mocked(repo.deleteRule).mockResolvedValue(true);
+    await expect(deleteRule(GYM_ID, 'rule-1')).resolves.toBeUndefined();
+  });
+});
+
+describe('redeemReward', () => {
+  it('throws NotFoundError when the reward does not exist or is already redeemed', async () => {
+    vi.mocked(repo.redeemReward).mockResolvedValue(null);
+    await expect(redeemReward(GYM_ID, 'nonexistent', 'admin-1')).rejects.toThrow(NotFoundError);
+  });
 });

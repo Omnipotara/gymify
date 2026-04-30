@@ -130,3 +130,49 @@ describe('v=2 rotating checkin QR', () => {
     expect(() => verifyQrPayload(payload, 'checkin', WRONG_SECRET)).toThrow();
   });
 });
+
+// ── Malformed payload shapes ───────────────────────────────────────────────────
+
+describe('verifyQrPayload — malformed payload shapes', () => {
+  it('rejects a payload with missing sig field', () => {
+    const { sig: _, ...noSig } = signQrPayload('join', GYM_ID, SECRET);
+    expect(() => verifyQrPayload(noSig, 'join', SECRET)).toThrow();
+  });
+
+  it('rejects a payload where sig is a number instead of a string', () => {
+    const payload = { ...signQrPayload('join', GYM_ID, SECRET), sig: 12345 };
+    expect(() => verifyQrPayload(payload, 'join', SECRET)).toThrow();
+  });
+
+  it('rejects a payload where sig is an empty string', () => {
+    const payload = { ...signQrPayload('join', GYM_ID, SECRET), sig: '' };
+    expect(() => verifyQrPayload(payload, 'join', SECRET)).toThrow();
+  });
+
+  it('rejects a v=2 payload with missing ts field', () => {
+    const { ts: _, ...noTs } = signRotatingCheckinPayload(GYM_ID, SECRET);
+    expect(() => verifyQrPayload(noTs, 'checkin', SECRET)).toThrow();
+  });
+
+  it('rejects a v=2 payload where ts is a string instead of a number', () => {
+    const payload = { ...signRotatingCheckinPayload(GYM_ID, SECRET), ts: '99999' };
+    expect(() => verifyQrPayload(payload, 'checkin', SECRET)).toThrow();
+  });
+
+  it('rejects a payload where gym_id is an empty string', () => {
+    const payload = { ...signQrPayload('join', GYM_ID, SECRET), gym_id: '' };
+    expect(() => verifyQrPayload(payload, 'join', SECRET)).toThrow();
+  });
+
+  it('rejects an array', () => {
+    expect(() => verifyQrPayload([1, 2, 3], 'join', SECRET)).toThrow();
+  });
+
+  it('two rotating QRs signed at different milliseconds produce different signatures', () => {
+    vi.useFakeTimers();
+    const first = signRotatingCheckinPayload(GYM_ID, SECRET);
+    vi.advanceTimersByTime(1); // 1 ms later
+    const second = signRotatingCheckinPayload(GYM_ID, SECRET);
+    expect(first.sig).not.toBe(second.sig);
+  });
+});

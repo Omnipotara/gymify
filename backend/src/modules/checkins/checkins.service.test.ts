@@ -185,3 +185,28 @@ describe('checkIn — reward evaluation error handling', () => {
     expect(result.new_rewards).toEqual([]);
   });
 });
+
+describe('checkIn — DB error propagation', () => {
+  it('propagates repo.create errors — unlike rewards, a failed write is a real failure', async () => {
+    vi.mocked(findById).mockResolvedValue(mockGym);
+    vi.mocked(findActiveByUserAndGym).mockResolvedValue(mockMembership);
+    vi.mocked(checkinsRepo.findRecentByUserAndGym).mockResolvedValue(null);
+    vi.mocked(checkinsRepo.create).mockRejectedValue(new Error('DB write failed'));
+
+    const payload = signQrPayload('checkin', GYM_ID, CHECKIN_SECRET);
+    await expect(checkIn(GYM_ID, USER_ID, payload, 'member'))
+      .rejects.toThrow('DB write failed');
+  });
+
+  it('propagates findRecentByUserAndGym errors before attempting to write', async () => {
+    vi.mocked(findById).mockResolvedValue(mockGym);
+    vi.mocked(findActiveByUserAndGym).mockResolvedValue(mockMembership);
+    vi.mocked(checkinsRepo.findRecentByUserAndGym).mockRejectedValue(new Error('Dedup query failed'));
+
+    const payload = signQrPayload('checkin', GYM_ID, CHECKIN_SECRET);
+    await expect(checkIn(GYM_ID, USER_ID, payload, 'member'))
+      .rejects.toThrow('Dedup query failed');
+
+    expect(checkinsRepo.create).not.toHaveBeenCalled();
+  });
+});

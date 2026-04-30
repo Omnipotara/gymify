@@ -83,3 +83,29 @@ describe('joinGym', () => {
     expect(repo.createUserGym).toHaveBeenCalledTimes(2);
   });
 });
+
+// ── joinGym — payload shape edge cases ────────────────────────────────────────
+
+describe('joinGym — payload shape edge cases', () => {
+  it('throws NotFoundError when payload is null', async () => {
+    await expect(joinGym('user-1', null)).rejects.toThrow(NotFoundError);
+    expect(repo.findById).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFoundError when payload is a plain string', async () => {
+    await expect(joinGym('user-1', 'not-an-object')).rejects.toThrow(NotFoundError);
+  });
+
+  it('throws NotFoundError when gym_id is a number instead of a string', async () => {
+    await expect(joinGym('user-1', { gym_id: 12345, type: 'join' })).rejects.toThrow(NotFoundError);
+    expect(repo.findById).not.toHaveBeenCalled();
+  });
+
+  it('propagates createUserGym errors (e.g. DB constraint violation)', async () => {
+    vi.mocked(repo.findById).mockResolvedValue(mockGym);
+    vi.mocked(repo.createUserGym).mockRejectedValue(new Error('unique constraint violation'));
+
+    const payload = signQrPayload('join', 'gym-1', JOIN_SECRET);
+    await expect(joinGym('user-1', payload)).rejects.toThrow('unique constraint violation');
+  });
+});
