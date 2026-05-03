@@ -11,6 +11,7 @@ import RewardsAdminPage from './pages/RewardsAdminPage';
 import ProfilePage from './pages/ProfilePage';
 import MemberProfileAdminPage from './pages/MemberProfileAdminPage';
 import CheckinDisplayPage from './pages/CheckinDisplayPage';
+import SuperAdminPage from './pages/SuperAdminPage';
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/gyms/:gymId/admin/rewards" element={<RewardsAdminPage />} />
         <Route path="/gyms/:gymId/admin/members/:userId" element={<MemberProfileAdminPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/super-admin" element={<SuperAdminPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/login" replace />} />

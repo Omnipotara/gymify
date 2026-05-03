@@ -99,6 +99,16 @@ export default function AppLayout() {
           </>
         )}
 
+        {user?.is_super_admin && (
+          <>
+            <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+              Platform
+            </p>
+            <NavItem to="/super-admin">Admin Panel</NavItem>
+            <div className="mx-4 my-2 border-t border-gray-100" />
+          </>
+        )}
+
         <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
           Account
         </p>

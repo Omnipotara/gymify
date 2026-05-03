@@ -14,6 +14,7 @@ import { checkinsRouter } from './modules/checkins/checkins.routes';
 import { membershipsRouter } from './modules/memberships/memberships.routes';
 import { dashboardRouter } from './modules/dashboard/dashboard.routes';
 import { rewardsRouter } from './modules/rewards/rewards.routes';
+import { adminRouter } from './modules/admin/admin.routes';
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/gyms/:gymId', checkinsRouter);
 app.use('/api/gyms/:gymId', membershipsRouter);
 app.use('/api/gyms/:gymId', dashboardRouter);
 app.use('/api/gyms/:gymId', rewardsRouter);
+app.use('/api/admin', adminRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found' } });
