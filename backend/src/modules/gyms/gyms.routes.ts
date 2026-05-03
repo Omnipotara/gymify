@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import { config } from '../../config';
 import { requireAuth } from '../../middleware/require-auth';
 import { requireGymMembership } from '../../middleware/require-gym-membership';
 import { handleJoin, handleGetMembers, handleGetJoinQr, handleGetCheckinQr } from './gyms.controller';
@@ -10,6 +11,7 @@ const qrLimiter = rateLimit({
   keyGenerator: (req) => req.user?.id ?? req.ip ?? 'unknown',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => config.isTest,
 });
 
 export const gymsRouter = Router();

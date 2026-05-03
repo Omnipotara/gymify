@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    exclude: ['src/**/*.integration.test.ts'],
     env: {
       // Provide required env vars for tests that transitively import config.
       // These values are for testing only and carry no security significance.
