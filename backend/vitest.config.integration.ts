@@ -15,6 +15,7 @@ export default defineConfig({
       DATABASE_URL: 'postgres://gymify_test:gymify_test@localhost:5433/gymify_test',
       ALLOWED_ORIGIN: 'http://localhost:5173',
       NODE_ENV: 'test',
+      RESEND_API_KEY: '', // prevents dotenv from loading the real key; email falls back to console.warn
     },
   },
 });

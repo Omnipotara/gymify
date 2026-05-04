@@ -3,6 +3,7 @@ import { RequireAuth } from './components/RequireAuth';
 import AppLayout from './components/AppLayout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import GymListPage from './pages/GymListPage';
 import GymPage from './pages/GymPage';
 import AdminPage from './pages/AdminPage';
@@ -19,6 +20,7 @@ export default function App() {
       {/* Public */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
       {/* Check-in display — full-screen, no sidebar */}
       <Route

@@ -1,7 +1,9 @@
+import { randomInt } from 'crypto';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config';
 import { ConflictError, TooManyRequestsError, UnauthorizedError } from '../../lib/errors';
+import { sendPasswordResetEmail } from '../../lib/email';
 import { logger } from '../../lib/logger';
 import * as repo from './auth.repository';
 import type { AuthResponse, DbUser } from './auth.types';
@@ -142,4 +144,40 @@ export async function login(data: {
 
   lockouts.delete(email); // clear on successful login
   return toResponse(user);
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  const user = await repo.findUserByEmail(email.toLowerCase());
+  if (!user) return; // silent — no enumeration
+
+  await repo.invalidateResetTokens(user.id);
+
+  const code = randomInt(100000, 1000000).toString();
+  const codeHash = await argon2.hash(code);
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+  await repo.createResetToken({ userId: user.id, codeHash, expiresAt });
+  await sendPasswordResetEmail(user.email, code);
+}
+
+export async function resetPassword(data: {
+  email: string;
+  code: string;
+  newPassword: string;
+}): Promise<void> {
+  const user = await repo.findUserByEmail(data.email.toLowerCase());
+  if (!user) throw new UnauthorizedError('Invalid or expired code');
+
+  const token = await repo.findValidResetToken(user.id);
+  if (!token) throw new UnauthorizedError('Invalid or expired code');
+
+  const valid = await argon2.verify(token.code_hash, data.code);
+  if (!valid) throw new UnauthorizedError('Invalid or expired code');
+
+  const passwordHash = await argon2.hash(data.newPassword);
+  await repo.updateUserPassword(user.id, passwordHash);
+  await repo.markResetTokenUsed(token.id);
+
+  lockouts.delete(data.email.toLowerCase());
+  logger.info({ event: 'password_reset', userId: user.id }, 'Password reset successful');
 }

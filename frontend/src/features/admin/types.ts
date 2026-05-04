@@ -21,6 +21,12 @@ export interface AdminUserGym {
   role: 'member' | 'admin';
 }
 
+export interface GymAdmin {
+  id: string;
+  email: string;
+  full_name: string | null;
+}
+
 export interface AdminUser {
   id: string;
   email: string;

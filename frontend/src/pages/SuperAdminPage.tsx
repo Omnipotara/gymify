@@ -8,8 +8,11 @@ import {
   deleteGym,
   getAdminUsers,
   setGymRole,
+  getGymAdmins,
+  addGymAdmin,
+  removeGymAdmin,
 } from '../features/admin/api';
-import type { AdminGym, AdminUser, AdminUserGym } from '../features/admin/types';
+import type { AdminGym, AdminUser, AdminUserGym, GymAdmin } from '../features/admin/types';
 
 // ── Stat card ────────────────────────────────────────────────────────────────
 
@@ -84,11 +87,81 @@ function CreateGymForm({ onCreated }: { onCreated: () => void }) {
   );
 }
 
+function GymAdminPanel({ gym }: { gym: AdminGym }) {
+  const queryClient = useQueryClient();
+  const [addEmail, setAddEmail] = useState('');
+  const [addError, setAddError] = useState('');
+
+  const { data: admins, isLoading } = useQuery({
+    queryKey: ['admin-gym-admins', gym.id],
+    queryFn: () => getGymAdmins(gym.id),
+  });
+
+  const addMutation = useMutation({
+    mutationFn: () => addGymAdmin(gym.id, addEmail.trim()),
+    onSuccess: () => {
+      setAddEmail('');
+      setAddError('');
+      queryClient.invalidateQueries({ queryKey: ['admin-gym-admins', gym.id] });
+    },
+    onError: (err) => setAddError(err instanceof ApiError ? err.message : 'Failed to add admin'),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (userId: string) => removeGymAdmin(gym.id, userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-gym-admins', gym.id] }),
+  });
+
+  return (
+    <div className="px-4 pb-3 bg-gray-50 border-t border-gray-100">
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide pt-3 mb-2">Admins</p>
+      {isLoading && <p className="text-xs text-gray-400 py-1">Loading…</p>}
+      {admins && admins.length === 0 && (
+        <p className="text-xs text-gray-400 py-1">No admins assigned yet.</p>
+      )}
+      {admins && admins.map((admin: GymAdmin) => (
+        <div key={admin.id} className="flex items-center justify-between py-1">
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-medium text-gray-800">{admin.full_name ?? admin.email}</span>
+            {admin.full_name && <span className="text-xs text-gray-400 ml-1">({admin.email})</span>}
+          </div>
+          <button
+            onClick={() => removeMutation.mutate(admin.id)}
+            disabled={removeMutation.isPending}
+            className="text-xs text-red-400 hover:text-red-600 hover:underline ml-3 disabled:opacity-50 shrink-0"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+      <div className="flex gap-2 mt-3">
+        <input
+          type="email"
+          value={addEmail}
+          onChange={(e) => { setAddEmail(e.target.value); setAddError(''); }}
+          placeholder="user@email.com"
+          className="flex-1 rounded-lg border border-gray-300 px-3 py-1 text-xs focus:border-blue-500 focus:outline-none"
+          onKeyDown={(e) => e.key === 'Enter' && addEmail.trim() && addMutation.mutate()}
+        />
+        <button
+          onClick={() => addMutation.mutate()}
+          disabled={!addEmail.trim() || addMutation.isPending}
+          className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+        >
+          {addMutation.isPending ? '…' : 'Add admin'}
+        </button>
+      </div>
+      {addError && <p className="text-xs text-red-600 mt-1">{addError}</p>}
+    </div>
+  );
+}
+
 function GymRow({ gym }: { gym: AdminGym }) {
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
-  const mutation = useMutation({
+  const deleteMutation = useMutation({
     mutationFn: () => deleteGym(gym.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-gyms'] });
@@ -97,31 +170,37 @@ function GymRow({ gym }: { gym: AdminGym }) {
   });
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-0">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-gray-900 truncate">{gym.name}</p>
-        <p className="text-xs text-gray-400">{gym.slug} · {gym.member_count} member{gym.member_count !== 1 ? 's' : ''}</p>
-      </div>
-      <div className="flex items-center gap-3 ml-4">
-        <span className="text-xs text-gray-400">{gym.created_at.slice(0, 10)}</span>
-        {confirming ? (
-          <span className="flex items-center gap-1">
-            <span className="text-xs text-gray-500">Delete?</span>
-            <button
-              onClick={() => mutation.mutate()}
-              disabled={mutation.isPending}
-              className="text-xs text-red-600 hover:underline disabled:opacity-50"
-            >
-              {mutation.isPending ? '…' : 'Yes'}
-            </button>
-            <button onClick={() => setConfirming(false)} className="text-xs text-gray-400 hover:underline">No</button>
-          </span>
-        ) : (
-          <button onClick={() => setConfirming(true)} className="text-xs text-red-400 hover:text-red-600 hover:underline">
-            Delete
+    <div className="border-b border-gray-100 last:border-0">
+      <div className="flex items-center justify-between px-4 py-3">
+        <button onClick={() => setExpanded(!expanded)} className="min-w-0 flex-1 text-left">
+          <p className="text-sm font-medium text-gray-900 truncate">{gym.name}</p>
+          <p className="text-xs text-gray-400">{gym.slug} · {gym.member_count} member{gym.member_count !== 1 ? 's' : ''}</p>
+        </button>
+        <div className="flex items-center gap-3 ml-4 shrink-0">
+          <span className="text-xs text-gray-400">{gym.created_at.slice(0, 10)}</span>
+          <button onClick={() => setExpanded(!expanded)} className="text-xs text-gray-400 hover:text-gray-600 w-4">
+            {expanded ? '▲' : '▼'}
           </button>
-        )}
+          {confirming ? (
+            <span className="flex items-center gap-1">
+              <span className="text-xs text-gray-500">Delete?</span>
+              <button
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="text-xs text-red-600 hover:underline disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? '…' : 'Yes'}
+              </button>
+              <button onClick={() => setConfirming(false)} className="text-xs text-gray-400 hover:underline">No</button>
+            </span>
+          ) : (
+            <button onClick={() => setConfirming(true)} className="text-xs text-red-400 hover:text-red-600 hover:underline">
+              Delete
+            </button>
+          )}
+        </div>
       </div>
+      {expanded && <GymAdminPanel gym={gym} />}
     </div>
   );
 }

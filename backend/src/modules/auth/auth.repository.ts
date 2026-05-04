@@ -1,6 +1,6 @@
 import { query } from '../../db/client';
 import { encryptField } from '../../lib/crypto';
-import type { DbUser } from './auth.types';
+import type { DbUser, DbResetToken } from './auth.types';
 
 const USER_COLS = 'id, email, password_hash, full_name, is_super_admin, phone';
 
@@ -34,4 +34,49 @@ export async function createUser(data: {
     [data.email.toLowerCase(), data.passwordHash, data.fullName ?? null, encryptField(data.phone)],
   );
   return rows[0];
+}
+
+export async function updateUserPassword(userId: string, passwordHash: string): Promise<void> {
+  await query(
+    `UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2`,
+    [passwordHash, userId],
+  );
+}
+
+export async function invalidateResetTokens(userId: string): Promise<void> {
+  await query(
+    `DELETE FROM password_reset_tokens WHERE user_id = $1`,
+    [userId],
+  );
+}
+
+export async function createResetToken(data: {
+  userId: string;
+  codeHash: string;
+  expiresAt: Date;
+}): Promise<void> {
+  await query(
+    `INSERT INTO password_reset_tokens (user_id, code_hash, expires_at)
+     VALUES ($1, $2, $3)`,
+    [data.userId, data.codeHash, data.expiresAt],
+  );
+}
+
+export async function findValidResetToken(userId: string): Promise<DbResetToken | null> {
+  const { rows } = await query<DbResetToken>(
+    `SELECT id, user_id, code_hash, expires_at, used_at
+     FROM password_reset_tokens
+     WHERE user_id = $1 AND used_at IS NULL AND expires_at > now()
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId],
+  );
+  return rows[0] ?? null;
+}
+
+export async function markResetTokenUsed(id: number): Promise<void> {
+  await query(
+    `UPDATE password_reset_tokens SET used_at = now() WHERE id = $1`,
+    [id],
+  );
 }

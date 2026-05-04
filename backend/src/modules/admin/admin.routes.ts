@@ -8,6 +8,9 @@ import {
   handleDeleteGym,
   handleGetUsers,
   handleSetGymRole,
+  handleGetGymAdmins,
+  handleAddGymAdmin,
+  handleRemoveGymAdmin,
 } from './admin.controller';
 
 export const adminRouter = Router();
@@ -21,3 +24,6 @@ adminRouter.post('/gyms', handleCreateGym);
 adminRouter.delete('/gyms/:gymId', handleDeleteGym);
 adminRouter.get('/users', handleGetUsers);
 adminRouter.patch('/gyms/:gymId/members/:userId/role', handleSetGymRole);
+adminRouter.get('/gyms/:gymId/admins', handleGetGymAdmins);
+adminRouter.post('/gyms/:gymId/admins', handleAddGymAdmin);
+adminRouter.delete('/gyms/:gymId/admins/:userId', handleRemoveGymAdmin);

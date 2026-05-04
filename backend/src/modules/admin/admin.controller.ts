@@ -44,3 +44,25 @@ export async function handleSetGymRole(req: Request, res: Response, next: NextFu
     res.status(204).end();
   } catch (err) { next(err); }
 }
+
+export async function handleGetGymAdmins(req: Request, res: Response, next: NextFunction) {
+  try {
+    res.json(await service.getGymAdmins(req.params.gymId));
+  } catch (err) { next(err); }
+}
+
+export async function handleAddGymAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = z.object({ email: z.string().email() }).safeParse(req.body);
+    if (!result.success) throw new ValidationError('Valid email is required');
+    await service.addGymAdmin(req.params.gymId, result.data.email);
+    res.status(201).end();
+  } catch (err) { next(err); }
+}
+
+export async function handleRemoveGymAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    await service.removeGymAdmin(req.params.gymId, req.params.userId);
+    res.status(204).end();
+  } catch (err) { next(err); }
+}

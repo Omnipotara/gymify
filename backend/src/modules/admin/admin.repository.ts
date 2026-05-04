@@ -1,5 +1,5 @@
 import { query } from '../../db/client';
-import type { AdminGym, AdminUser, PlatformStats } from './admin.types';
+import type { AdminGym, AdminUser, GymAdmin, PlatformStats } from './admin.types';
 
 export async function getPlatformStats(): Promise<PlatformStats> {
   const [gyms, users, checkinsToday, checkinsTotal, activeMembers, newUsers] = await Promise.all([
@@ -82,6 +82,50 @@ export async function getAllUsers(): Promise<AdminUser[]> {
      ORDER BY u.created_at DESC`,
   );
   return rows;
+}
+
+export async function findUserByEmail(email: string): Promise<{ id: string; email: string; full_name: string | null } | null> {
+  const { rows } = await query<{ id: string; email: string; full_name: string | null }>(
+    `SELECT id, email, full_name FROM users WHERE email = $1`,
+    [email.toLowerCase()],
+  );
+  return rows[0] ?? null;
+}
+
+export async function findGymById(gymId: string): Promise<{ id: string; name: string } | null> {
+  const { rows } = await query<{ id: string; name: string }>(
+    `SELECT id, name FROM gyms WHERE id = $1`,
+    [gymId],
+  );
+  return rows[0] ?? null;
+}
+
+export async function getGymAdmins(gymId: string): Promise<GymAdmin[]> {
+  const { rows } = await query<GymAdmin>(
+    `SELECT u.id, u.email, u.full_name
+     FROM user_gyms ug
+     JOIN users u ON u.id = ug.user_id
+     WHERE ug.gym_id = $1 AND ug.role = 'admin'
+     ORDER BY u.full_name, u.email`,
+    [gymId],
+  );
+  return rows;
+}
+
+export async function addGymAdmin(gymId: string, userId: string): Promise<void> {
+  await query(
+    `INSERT INTO user_gyms (user_id, gym_id, role) VALUES ($1, $2, 'admin')
+     ON CONFLICT (user_id, gym_id) DO UPDATE SET role = 'admin'`,
+    [userId, gymId],
+  );
+}
+
+export async function removeGymAdmin(gymId: string, userId: string): Promise<boolean> {
+  const { rowCount } = await query(
+    `DELETE FROM user_gyms WHERE gym_id = $1 AND user_id = $2 AND role = 'admin'`,
+    [gymId, userId],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function setGymMemberRole(

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../../app';
-import { truncateAll } from '../../test/helpers';
+import { query } from '../../db/client';
+import { truncateAll, registerAndLogin, createTestResetToken } from '../../test/helpers';
 
 const AUTH = '/api/auth';
 
@@ -148,6 +149,153 @@ describe('Auth API', () => {
     it('returns 401 when no cookie is sent', async () => {
       const res = await request(app).get('/api/me');
       expect(res.status).toBe(401);
+    });
+  });
+
+  // ── Forgot password ──────────────────────────────────────────────────────────
+
+  describe('POST /api/auth/forgot-password', () => {
+    it('returns 200 with a generic message for a registered email', async () => {
+      await request(app).post(`${AUTH}/register`).send({ email: 'reset-user@example.com', password: 'password123' });
+
+      const res = await request(app).post(`${AUTH}/forgot-password`).send({ email: 'reset-user@example.com' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toMatch(/code has been sent/i);
+    });
+
+    it('returns 200 for an unknown email — no enumeration', async () => {
+      const res = await request(app).post(`${AUTH}/forgot-password`).send({ email: 'nobody@example.com' });
+
+      expect(res.status).toBe(200);
+      // Same message shape regardless
+      expect(res.body.message).toMatch(/code has been sent/i);
+    });
+
+    it('creates a token in the DB for a known email', async () => {
+      const { userId } = await registerAndLogin('token-check@example.com');
+
+      await request(app).post(`${AUTH}/forgot-password`).send({ email: 'token-check@example.com' });
+
+      const { rows } = await query(
+        `SELECT id FROM password_reset_tokens WHERE user_id = $1 AND used_at IS NULL AND expires_at > now()`,
+        [userId],
+      );
+      expect(rows.length).toBe(1);
+    });
+
+    it('returns 400 for an invalid email format', async () => {
+      const res = await request(app).post(`${AUTH}/forgot-password`).send({ email: 'not-an-email' });
+      expect(res.status).toBe(400);
+    });
+
+    it('invalidates the first token when a second reset is requested', async () => {
+      const { userId } = await registerAndLogin('invalidate@example.com');
+
+      // First request — creates token with code 111111
+      await createTestResetToken(userId, '111111');
+
+      // Second request — should replace the first token
+      await request(app).post(`${AUTH}/forgot-password`).send({ email: 'invalidate@example.com' });
+
+      // Old code must now be rejected
+      const res = await request(app).post(`${AUTH}/reset-password`).send({
+        email: 'invalidate@example.com',
+        code: '111111',
+        new_password: 'newPass99!',
+      });
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // ── Reset password ───────────────────────────────────────────────────────────
+
+  describe('POST /api/auth/reset-password', () => {
+    it('resets the password and allows login with the new password', async () => {
+      const { userId } = await registerAndLogin('pw-reset@example.com');
+      await createTestResetToken(userId, '654321');
+
+      const resetRes = await request(app).post(`${AUTH}/reset-password`).send({
+        email: 'pw-reset@example.com',
+        code: '654321',
+        new_password: 'brandNewPass99!',
+      });
+      expect(resetRes.status).toBe(200);
+
+      const loginRes = await request(app).post(`${AUTH}/login`).send({
+        email: 'pw-reset@example.com',
+        password: 'brandNewPass99!',
+      });
+      expect(loginRes.status).toBe(200);
+    });
+
+    it('invalidates the token after use — second reset attempt with same code fails', async () => {
+      const { userId } = await registerAndLogin('single-use@example.com');
+      await createTestResetToken(userId, '111222');
+
+      await request(app).post(`${AUTH}/reset-password`).send({
+        email: 'single-use@example.com',
+        code: '111222',
+        new_password: 'firstReset99!',
+      });
+
+      const secondRes = await request(app).post(`${AUTH}/reset-password`).send({
+        email: 'single-use@example.com',
+        code: '111222',
+        new_password: 'secondReset99!',
+      });
+      expect(secondRes.status).toBe(401);
+    });
+
+    it('returns 401 for a wrong code', async () => {
+      const { userId } = await registerAndLogin('wrong-code@example.com');
+      await createTestResetToken(userId, '777888');
+
+      const res = await request(app).post(`${AUTH}/reset-password`).send({
+        email: 'wrong-code@example.com',
+        code: '000000',
+        new_password: 'newPass99!',
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 401 for an expired token', async () => {
+      const { userId } = await registerAndLogin('expired-token@example.com');
+      await createTestResetToken(userId, '333444', true); // expired=true
+
+      const res = await request(app).post(`${AUTH}/reset-password`).send({
+        email: 'expired-token@example.com',
+        code: '333444',
+        new_password: 'newPass99!',
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 401 for an unknown email', async () => {
+      const res = await request(app).post(`${AUTH}/reset-password`).send({
+        email: 'ghost@example.com',
+        code: '123456',
+        new_password: 'newPass99!',
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when code is not 6 numeric digits', async () => {
+      const res = await request(app).post(`${AUTH}/reset-password`).send({
+        email: 'someone@example.com',
+        code: 'abcdef',
+        new_password: 'newPass99!',
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when new password is shorter than 8 characters', async () => {
+      const res = await request(app).post(`${AUTH}/reset-password`).send({
+        email: 'someone@example.com',
+        code: '123456',
+        new_password: 'short',
+      });
+      expect(res.status).toBe(400);
     });
   });
 });

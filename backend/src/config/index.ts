@@ -10,6 +10,7 @@ const schema = z.object({
     .regex(/^[0-9a-fA-F]{64}$/, 'QR_ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes)'),
   ALLOWED_ORIGIN: z.string().url(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  RESEND_API_KEY: z.string().optional(),
 });
 
 const result = schema.safeParse(process.env);
@@ -31,4 +32,5 @@ export const config = {
   nodeEnv: env.NODE_ENV,
   isProd: env.NODE_ENV === 'production',
   isTest: env.NODE_ENV === 'test',
+  resendApiKey: env.RESEND_API_KEY,
 } as const;

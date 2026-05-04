@@ -1,8 +1,9 @@
 import crypto from 'crypto';
 import { NotFoundError, ValidationError } from '../../lib/errors';
 import { encryptSecret } from '../../lib/crypto';
+import { sendGymAdminNotificationEmail } from '../../lib/email';
 import * as repo from './admin.repository';
-import type { AdminGym, AdminUser, PlatformStats } from './admin.types';
+import type { AdminGym, AdminUser, GymAdmin, PlatformStats } from './admin.types';
 
 export async function getPlatformStats(): Promise<PlatformStats> {
   return repo.getPlatformStats();
@@ -44,4 +45,25 @@ export async function setGymMemberRole(
   role: 'admin' | 'member',
 ): Promise<void> {
   await repo.setGymMemberRole(gymId, userId, role);
+}
+
+export async function getGymAdmins(gymId: string): Promise<GymAdmin[]> {
+  return repo.getGymAdmins(gymId);
+}
+
+export async function addGymAdmin(gymId: string, email: string): Promise<void> {
+  const [user, gym] = await Promise.all([
+    repo.findUserByEmail(email),
+    repo.findGymById(gymId),
+  ]);
+  if (!user) throw new NotFoundError('No user with that email exists');
+  if (!gym) throw new NotFoundError('Gym not found');
+
+  await repo.addGymAdmin(gymId, user.id);
+  await sendGymAdminNotificationEmail(user.email, gym.name);
+}
+
+export async function removeGymAdmin(gymId: string, userId: string): Promise<void> {
+  const removed = await repo.removeGymAdmin(gymId, userId);
+  if (!removed) throw new NotFoundError('This user is not an admin of this gym');
 }

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ConflictError, TooManyRequestsError, UnauthorizedError } from '../../lib/errors';
 
 vi.mock('./auth.repository');
+vi.mock('../../lib/email');
 vi.mock('argon2', () => ({
   default: {
     hash: vi.fn(),
@@ -10,9 +11,10 @@ vi.mock('argon2', () => ({
 }));
 
 import * as repo from './auth.repository';
+import * as emailLib from '../../lib/email';
 import argon2 from 'argon2';
-import { login, register } from './auth.service';
-import type { DbUser } from './auth.types';
+import { login, register, requestPasswordReset, resetPassword } from './auth.service';
+import type { DbResetToken, DbUser } from './auth.types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -24,6 +26,17 @@ function makeUser(overrides: Partial<DbUser> = {}): DbUser {
     full_name: 'Test User',
     is_super_admin: false,
     phone: null,
+    ...overrides,
+  };
+}
+
+function makeToken(overrides: Partial<DbResetToken> = {}): DbResetToken {
+  return {
+    id: 1,
+    user_id: 'user-1',
+    code_hash: '$hashed-code',
+    expires_at: new Date(Date.now() + 15 * 60 * 1_000),
+    used_at: null,
     ...overrides,
   };
 }
@@ -49,6 +62,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(argon2.hash as ReturnType<typeof vi.fn>).mockResolvedValue('$hashed');
   vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+  vi.mocked(emailLib.sendPasswordResetEmail).mockResolvedValue(undefined);
 });
 
 afterEach(() => vi.useRealTimers());
@@ -93,7 +107,6 @@ describe('login — basics', () => {
   it('throws UnauthorizedError for wrong password', async () => {
     vi.mocked(repo.findUserByEmail).mockResolvedValue(makeUser({ email: 'wrongpw@test.com' }));
     vi.mocked(repo.isUserAdmin).mockResolvedValue(false);
-    // argon2.verify returns false by default
 
     await expect(login({ email: 'wrongpw@test.com', password: 'bad' }))
       .rejects.toThrow(UnauthorizedError);
@@ -104,7 +117,6 @@ describe('login — basics', () => {
 
     await expect(login({ email: 'ghost@test.com', password: 'any' }))
       .rejects.toThrow(UnauthorizedError);
-    // Dummy hash still runs to equalise response time
     expect(argon2.verify).toHaveBeenCalledOnce();
   });
 
@@ -137,7 +149,7 @@ describe('brute-force — regular user (threshold 10)', () => {
 
   it('skips argon2 entirely once account is locked', async () => {
     await failLogins('reg-skip@test.com', 10);
-    vi.clearAllMocks(); // reset call counts
+    vi.clearAllMocks();
 
     await login({ email: 'reg-skip@test.com', password: 'bad' }).catch(() => {});
 
@@ -210,16 +222,13 @@ describe('brute-force — super admin (threshold 5)', () => {
 describe('brute-force — recovery', () => {
   it('clears counter on successful login, allowing a fresh failure window', async () => {
     const email = 'recovery@test.com';
-    // 9 failures — just below regular threshold
     await failLogins(email, 9);
 
-    // Successful login
     vi.mocked(repo.findUserByEmail).mockResolvedValue(makeUser({ email }));
     vi.mocked(repo.isUserAdmin).mockResolvedValue(false);
     vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(true);
     await login({ email, password: 'correct' });
 
-    // 9 more failures in the fresh window — still should not be locked
     await failLogins(email, 9);
     vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(false);
     await expect(login({ email, password: 'bad' }))
@@ -236,7 +245,6 @@ describe('brute-force — recovery', () => {
 
     vi.advanceTimersByTime(15 * 60 * 1000 + 1);
 
-    // Locked-out state cleared — wrong password now returns UnauthorizedError again
     vi.mocked(repo.findUserByEmail).mockResolvedValue(makeUser({ email }));
     vi.mocked(repo.isUserAdmin).mockResolvedValue(false);
     vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(false);
@@ -248,17 +256,13 @@ describe('brute-force — recovery', () => {
     vi.useFakeTimers();
     const email = 'windowreset@test.com';
 
-    // 9 failures — just below threshold
     await failLogins(email, 9);
-
-    // Advance past the failure window
     vi.advanceTimersByTime(15 * 60 * 1000 + 1);
 
-    // 9 more failures in the new window — still not locked (needs 10 in the new window)
     await failLogins(email, 9);
     vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(false);
     await expect(login({ email, password: 'bad' }))
-      .rejects.toThrow(UnauthorizedError); // 10th in new window — not yet locked from prior window
+      .rejects.toThrow(UnauthorizedError);
   });
 });
 
@@ -296,7 +300,6 @@ describe('brute-force — edge cases', () => {
   it('shares lockout counter across mixed-case variants of the same email', async () => {
     const email = 'MixedCase@EXAMPLE.COM';
     const normalised = 'mixedcase@example.com';
-    // Fail 5 times as admin using the mixed-case address
     vi.mocked(repo.findUserByEmail).mockResolvedValue(makeUser({ email: normalised }));
     vi.mocked(repo.isUserAdmin).mockResolvedValue(true);
     vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(false);
@@ -304,7 +307,6 @@ describe('brute-force — edge cases', () => {
       await login({ email, password: 'wrong' }).catch(() => {});
     }
 
-    // 6th attempt using lowercase — same counter, already locked
     await expect(login({ email: normalised, password: 'wrong' }))
       .rejects.toThrow(TooManyRequestsError);
   });
@@ -315,18 +317,14 @@ describe('brute-force — edge cases', () => {
     vi.mocked(repo.findUserByEmail).mockResolvedValue(user);
     vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(false);
 
-    // First 4 failures: not an admin (threshold = USER_THRESHOLD = 10)
     vi.mocked(repo.isUserAdmin).mockResolvedValue(false);
     for (let i = 0; i < 4; i++) {
       await login({ email, password: 'wrong' }).catch(() => {});
     }
 
-    // 5th failure: now detected as admin (threshold tightens to ADMIN_THRESHOLD = 5)
-    // count reaches 5 >= 5 → account locks on this attempt
     vi.mocked(repo.isUserAdmin).mockResolvedValue(true);
     await login({ email, password: 'wrong' }).catch(() => {});
 
-    // 6th attempt is blocked
     await expect(login({ email, password: 'wrong' }))
       .rejects.toThrow(TooManyRequestsError);
   });
@@ -339,10 +337,130 @@ describe('brute-force — edge cases', () => {
     await expect(login({ email, password: 'any' }))
       .rejects.toThrow('DB connection lost');
 
-    // No lockout recorded — the next attempt should still get UnauthorizedError, not TooManyRequests
     vi.mocked(repo.isUserAdmin).mockResolvedValue(false);
     vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(false);
     await expect(login({ email, password: 'wrong' }))
       .rejects.toThrow(UnauthorizedError);
+  });
+});
+
+// ── requestPasswordReset ──────────────────────────────────────────────────────
+
+describe('requestPasswordReset', () => {
+  it('invalidates old tokens, creates new token, sends email for a known address', async () => {
+    vi.mocked(repo.findUserByEmail).mockResolvedValue(makeUser());
+    vi.mocked(repo.invalidateResetTokens).mockResolvedValue(undefined);
+    vi.mocked(repo.createResetToken).mockResolvedValue(undefined);
+
+    await requestPasswordReset('user@test.com');
+
+    expect(repo.invalidateResetTokens).toHaveBeenCalledWith('user-1');
+    expect(repo.createResetToken).toHaveBeenCalledOnce();
+    expect(emailLib.sendPasswordResetEmail).toHaveBeenCalledWith('user@test.com', expect.any(String));
+  });
+
+  it('sends a 6-digit numeric code', async () => {
+    vi.mocked(repo.findUserByEmail).mockResolvedValue(makeUser());
+    vi.mocked(repo.invalidateResetTokens).mockResolvedValue(undefined);
+    vi.mocked(repo.createResetToken).mockResolvedValue(undefined);
+
+    await requestPasswordReset('user@test.com');
+
+    const [, code] = vi.mocked(emailLib.sendPasswordResetEmail).mock.calls[0];
+    expect(code).toMatch(/^\d{6}$/);
+  });
+
+  it('returns silently for an unknown email — no enumeration', async () => {
+    vi.mocked(repo.findUserByEmail).mockResolvedValue(null);
+
+    await expect(requestPasswordReset('ghost@test.com')).resolves.toBeUndefined();
+    expect(repo.invalidateResetTokens).not.toHaveBeenCalled();
+    expect(emailLib.sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  it('stores the token with a hash, not the raw code', async () => {
+    vi.mocked(repo.findUserByEmail).mockResolvedValue(makeUser());
+    vi.mocked(repo.invalidateResetTokens).mockResolvedValue(undefined);
+    vi.mocked(repo.createResetToken).mockResolvedValue(undefined);
+
+    await requestPasswordReset('user@test.com');
+
+    const [, code] = vi.mocked(emailLib.sendPasswordResetEmail).mock.calls[0];
+    const { codeHash } = vi.mocked(repo.createResetToken).mock.calls[0][0];
+    // The stored hash must differ from the raw code
+    expect(codeHash).not.toBe(code);
+    // argon2.hash was called (our mock returns '$hashed')
+    expect(argon2.hash).toHaveBeenCalledWith(code);
+  });
+});
+
+// ── resetPassword ─────────────────────────────────────────────────────────────
+
+describe('resetPassword', () => {
+  it('updates the password and marks the token used on valid code', async () => {
+    vi.mocked(repo.findUserByEmail).mockResolvedValue(makeUser());
+    vi.mocked(repo.findValidResetToken).mockResolvedValue(makeToken());
+    vi.mocked(repo.markResetTokenUsed).mockResolvedValue(undefined);
+    vi.mocked(repo.updateUserPassword).mockResolvedValue(undefined);
+    vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+
+    await resetPassword({ email: 'user@test.com', code: '123456', newPassword: 'newPass99!' });
+
+    expect(repo.updateUserPassword).toHaveBeenCalledWith('user-1', '$hashed');
+    expect(repo.markResetTokenUsed).toHaveBeenCalledWith(1);
+  });
+
+  it('throws UnauthorizedError for an unknown email', async () => {
+    vi.mocked(repo.findUserByEmail).mockResolvedValue(null);
+
+    await expect(
+      resetPassword({ email: 'ghost@test.com', code: '123456', newPassword: 'newPass99!' }),
+    ).rejects.toThrow(UnauthorizedError);
+    expect(repo.updateUserPassword).not.toHaveBeenCalled();
+  });
+
+  it('throws UnauthorizedError when no valid token exists', async () => {
+    vi.mocked(repo.findUserByEmail).mockResolvedValue(makeUser());
+    vi.mocked(repo.findValidResetToken).mockResolvedValue(null);
+
+    await expect(
+      resetPassword({ email: 'user@test.com', code: '123456', newPassword: 'newPass99!' }),
+    ).rejects.toThrow(UnauthorizedError);
+    expect(repo.updateUserPassword).not.toHaveBeenCalled();
+  });
+
+  it('throws UnauthorizedError for an incorrect code', async () => {
+    vi.mocked(repo.findUserByEmail).mockResolvedValue(makeUser());
+    vi.mocked(repo.findValidResetToken).mockResolvedValue(makeToken());
+    vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+
+    await expect(
+      resetPassword({ email: 'user@test.com', code: '999999', newPassword: 'newPass99!' }),
+    ).rejects.toThrow(UnauthorizedError);
+    expect(repo.updateUserPassword).not.toHaveBeenCalled();
+    expect(repo.markResetTokenUsed).not.toHaveBeenCalled();
+  });
+
+  it('clears the lockout entry for the account on success', async () => {
+    const email = 'locked-reset@test.com';
+    // Build up some failed login attempts
+    vi.mocked(repo.findUserByEmail).mockResolvedValue(makeUser({ email }));
+    vi.mocked(repo.isUserAdmin).mockResolvedValue(false);
+    vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+    for (let i = 0; i < 10; i++) {
+      await login({ email, password: 'wrong' }).catch(() => {});
+    }
+    await expect(login({ email, password: 'wrong' })).rejects.toThrow(TooManyRequestsError);
+
+    // Reset clears the lockout
+    vi.mocked(repo.findValidResetToken).mockResolvedValue(makeToken({ user_id: 'user-1' }));
+    vi.mocked(repo.markResetTokenUsed).mockResolvedValue(undefined);
+    vi.mocked(repo.updateUserPassword).mockResolvedValue(undefined);
+    vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+    await resetPassword({ email, code: '123456', newPassword: 'newPass99!' });
+
+    // Now login should return UnauthorizedError (wrong password), not TooManyRequests
+    vi.mocked(argon2.verify as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+    await expect(login({ email, password: 'wrong' })).rejects.toThrow(UnauthorizedError);
   });
 });

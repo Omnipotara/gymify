@@ -59,3 +59,41 @@ export function handleLogout(_req: Request, res: Response) {
     .status(204)
     .send();
 }
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+const resetPasswordSchema = z.object({
+  email: z.string().email(),
+  code: z.string().length(6).regex(/^\d{6}$/),
+  new_password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+export async function handleForgotPassword(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = forgotPasswordSchema.safeParse(req.body);
+    if (!result.success) throw new ValidationError('Validation failed', result.error.flatten().fieldErrors as Record<string, string[]>);
+
+    await service.requestPasswordReset(result.data.email);
+    res.json({ message: 'If an account with that email exists, a reset code has been sent.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleResetPassword(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = resetPasswordSchema.safeParse(req.body);
+    if (!result.success) throw new ValidationError('Validation failed', result.error.flatten().fieldErrors as Record<string, string[]>);
+
+    await service.resetPassword({
+      email: result.data.email,
+      code: result.data.code,
+      newPassword: result.data.new_password,
+    });
+    res.json({ message: 'Password reset successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}

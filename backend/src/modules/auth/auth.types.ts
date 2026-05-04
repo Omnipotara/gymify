@@ -14,3 +14,11 @@ export interface DbUser extends AuthUser {
   password_hash: string;
   phone: string | null;
 }
+
+export interface DbResetToken {
+  id: number;
+  user_id: string;
+  code_hash: string;
+  expires_at: Date;
+  used_at: Date | null;
+}

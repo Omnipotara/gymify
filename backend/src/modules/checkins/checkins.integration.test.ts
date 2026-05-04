@@ -7,6 +7,7 @@ import {
   makeAdmin,
   makeGymMember,
   createActiveMembership,
+  createExpiredMembership,
   registerAndLogin,
   buildCheckinQr,
   buildRotatingCheckinQr,
@@ -78,6 +79,20 @@ describe('Check-ins API', () => {
       const { cookie, userId } = await registerAndLogin('expired@example.com');
       await makeGymMember(userId, gym.id);
       // No membership created
+
+      const res = await request(app)
+        .post(`/api/gyms/${gym.id}/check-ins`)
+        .set('Cookie', cookie)
+        .send(buildCheckinQr(gym.id, gym.checkinSecret));
+
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects a member whose membership has expired with 403', async () => {
+      const gym = await createTestGym();
+      const { cookie, userId } = await registerAndLogin('lapsed@example.com');
+      await makeGymMember(userId, gym.id);
+      await createExpiredMembership(userId, gym.id);
 
       const res = await request(app)
         .post(`/api/gyms/${gym.id}/check-ins`)

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth-context';
 import { login } from '../features/auth/api';
 import { ApiError } from '../lib/api-client';
@@ -7,6 +7,8 @@ import { ApiError } from '../lib/api-client';
 export default function LoginPage() {
   const { login: setAuth } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const resetSuccess = (location.state as { resetSuccess?: boolean } | null)?.resetSuccess;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -31,6 +33,11 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm space-y-6 rounded-xl bg-white p-8 shadow">
         <h1 className="text-2xl font-bold text-gray-900">Sign in to Gymify</h1>
+        {resetSuccess && (
+          <p className="rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">
+            Password reset successfully. Sign in with your new password.
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
@@ -43,7 +50,12 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Password</label>
+            <div className="mb-1 flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">Password</label>
+              <Link to="/forgot-password" className="text-xs text-blue-600 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               required
