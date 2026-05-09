@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { ApiError } from '../lib/api-client';
 import {
   getPlatformStats,
@@ -14,18 +15,22 @@ import {
 } from '../features/admin/api';
 import type { AdminGym, AdminUser, AdminUserGym, GymAdmin } from '../features/admin/types';
 
-// ── Stat card ────────────────────────────────────────────────────────────────
+const inputCls =
+  'rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground ' +
+  'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring';
+
+// ── Stat card ─────────────────────────────────────────────────────────────────
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-xl bg-white shadow-sm p-4 border border-gray-100">
-      <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+    <div className="rounded-2xl bg-card border border-border p-4">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
+      <p className="font-heading text-4xl font-bold text-foreground mt-1">{value}</p>
     </div>
   );
 }
 
-// ── Overview tab ─────────────────────────────────────────────────────────────
+// ── Overview tab ──────────────────────────────────────────────────────────────
 
 function OverviewTab() {
   const { data, isLoading } = useQuery({
@@ -34,7 +39,7 @@ function OverviewTab() {
     refetchInterval: 30_000,
   });
 
-  if (isLoading) return <p className="text-center text-gray-400 py-12">Loading…</p>;
+  if (isLoading) return <p className="text-center text-muted-foreground py-12 text-sm">Loading…</p>;
   if (!data) return null;
 
   return (
@@ -49,7 +54,7 @@ function OverviewTab() {
   );
 }
 
-// ── Gyms tab ─────────────────────────────────────────────────────────────────
+// ── Gyms tab ──────────────────────────────────────────────────────────────────
 
 function CreateGymForm({ onCreated }: { onCreated: () => void }) {
   const [name, setName] = useState('');
@@ -57,32 +62,32 @@ function CreateGymForm({ onCreated }: { onCreated: () => void }) {
 
   const mutation = useMutation({
     mutationFn: () => createGym(name.trim()),
-    onSuccess: () => {
-      setName('');
-      setError('');
-      onCreated();
-    },
+    onSuccess: () => { setName(''); setError(''); onCreated(); },
     onError: (err) => setError(err instanceof ApiError ? err.message : 'Failed to create gym'),
   });
 
   return (
-    <div className="flex gap-2 items-start">
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Gym name"
-        className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
-        onKeyDown={(e) => e.key === 'Enter' && name.trim() && mutation.mutate()}
-      />
-      <button
-        onClick={() => mutation.mutate()}
-        disabled={!name.trim() || mutation.isPending}
-        className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
-      >
-        {mutation.isPending ? 'Creating…' : '+ New Gym'}
-      </button>
-      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+    <div className="space-y-1">
+      <div className="flex gap-2 items-start">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Gym name"
+          className={inputCls + ' flex-1'}
+          onKeyDown={(e) => e.key === 'Enter' && name.trim() && mutation.mutate()}
+        />
+        <button
+          onClick={() => mutation.mutate()}
+          disabled={!name.trim() || mutation.isPending}
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium
+            text-primary-foreground hover:bg-primary/90 disabled:opacity-50 whitespace-nowrap"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          {mutation.isPending ? 'Creating…' : 'New Gym'}
+        </button>
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
@@ -113,45 +118,48 @@ function GymAdminPanel({ gym }: { gym: AdminGym }) {
   });
 
   return (
-    <div className="px-4 pb-3 bg-gray-50 border-t border-gray-100">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide pt-3 mb-2">Admins</p>
-      {isLoading && <p className="text-xs text-gray-400 py-1">Loading…</p>}
+    <div className="px-4 pb-4 pt-3 bg-muted/50 border-t border-border space-y-3">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Admins</p>
+      {isLoading && <p className="text-xs text-muted-foreground">Loading…</p>}
       {admins && admins.length === 0 && (
-        <p className="text-xs text-gray-400 py-1">No admins assigned yet.</p>
+        <p className="text-xs text-muted-foreground">No admins assigned yet.</p>
       )}
       {admins && admins.map((admin: GymAdmin) => (
-        <div key={admin.id} className="flex items-center justify-between py-1">
+        <div key={admin.id} className="flex items-center justify-between">
           <div className="min-w-0 flex-1">
-            <span className="text-xs font-medium text-gray-800">{admin.full_name ?? admin.email}</span>
-            {admin.full_name && <span className="text-xs text-gray-400 ml-1">({admin.email})</span>}
+            <span className="text-xs font-medium text-foreground">{admin.full_name ?? admin.email}</span>
+            {admin.full_name && (
+              <span className="text-xs text-muted-foreground ml-1.5">({admin.email})</span>
+            )}
           </div>
           <button
             onClick={() => removeMutation.mutate(admin.id)}
             disabled={removeMutation.isPending}
-            className="text-xs text-red-400 hover:text-red-600 hover:underline ml-3 disabled:opacity-50 shrink-0"
+            className="text-xs text-destructive hover:underline ml-3 disabled:opacity-50 shrink-0"
           >
             Remove
           </button>
         </div>
       ))}
-      <div className="flex gap-2 mt-3">
+      <div className="flex gap-2">
         <input
           type="email"
           value={addEmail}
           onChange={(e) => { setAddEmail(e.target.value); setAddError(''); }}
           placeholder="user@email.com"
-          className="flex-1 rounded-lg border border-gray-300 px-3 py-1 text-xs focus:border-blue-500 focus:outline-none"
+          className={inputCls + ' flex-1 py-1 text-xs'}
           onKeyDown={(e) => e.key === 'Enter' && addEmail.trim() && addMutation.mutate()}
         />
         <button
           onClick={() => addMutation.mutate()}
           disabled={!addEmail.trim() || addMutation.isPending}
-          className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+          className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-primary-foreground
+            hover:bg-primary/90 disabled:opacity-50 whitespace-nowrap"
         >
-          {addMutation.isPending ? '…' : 'Add admin'}
+          {addMutation.isPending ? '…' : 'Add'}
         </button>
       </div>
-      {addError && <p className="text-xs text-red-600 mt-1">{addError}</p>}
+      {addError && <p className="text-xs text-destructive">{addError}</p>}
     </div>
   );
 }
@@ -170,31 +178,43 @@ function GymRow({ gym }: { gym: AdminGym }) {
   });
 
   return (
-    <div className="border-b border-gray-100 last:border-0">
-      <div className="flex items-center justify-between px-4 py-3">
+    <div className="border-b border-border last:border-0">
+      <div className="flex items-center justify-between px-4 py-3 gap-3">
         <button onClick={() => setExpanded(!expanded)} className="min-w-0 flex-1 text-left">
-          <p className="text-sm font-medium text-gray-900 truncate">{gym.name}</p>
-          <p className="text-xs text-gray-400">{gym.slug} · {gym.member_count} member{gym.member_count !== 1 ? 's' : ''}</p>
+          <p className="text-sm font-medium text-foreground truncate">{gym.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {gym.slug} · {gym.member_count} member{gym.member_count !== 1 ? 's' : ''}
+          </p>
         </button>
-        <div className="flex items-center gap-3 ml-4 shrink-0">
-          <span className="text-xs text-gray-400">{gym.created_at.slice(0, 10)}</span>
-          <button onClick={() => setExpanded(!expanded)} className="text-xs text-gray-400 hover:text-gray-600 w-4">
-            {expanded ? '▲' : '▼'}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            {gym.created_at.slice(0, 10)}
+          </span>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
           {confirming ? (
             <span className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">Delete?</span>
+              <span className="text-xs text-muted-foreground">Delete?</span>
               <button
                 onClick={() => deleteMutation.mutate()}
                 disabled={deleteMutation.isPending}
-                className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                className="text-xs text-destructive hover:underline disabled:opacity-50"
               >
                 {deleteMutation.isPending ? '…' : 'Yes'}
               </button>
-              <button onClick={() => setConfirming(false)} className="text-xs text-gray-400 hover:underline">No</button>
+              <button onClick={() => setConfirming(false)} className="text-xs text-muted-foreground hover:underline">
+                No
+              </button>
             </span>
           ) : (
-            <button onClick={() => setConfirming(true)} className="text-xs text-red-400 hover:text-red-600 hover:underline">
+            <button
+              onClick={() => setConfirming(true)}
+              className="text-xs text-destructive hover:underline"
+            >
               Delete
             </button>
           )}
@@ -214,8 +234,8 @@ function GymsTab() {
     queryFn: getAdminGyms,
   });
 
-  const filtered = (data?.items ?? []).filter((g) =>
-    !search.trim() || g.name.toLowerCase().includes(search.toLowerCase()),
+  const filtered = (data?.items ?? []).filter(
+    (g) => !search.trim() || g.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -227,16 +247,16 @@ function GymsTab() {
           placeholder="Search gyms…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+          className={inputCls + ' flex-1'}
         />
-        <span className="text-xs text-gray-400 whitespace-nowrap">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
           {data ? `${filtered.length} of ${data.items.length}` : ''}
         </span>
       </div>
-      <div className="rounded-xl bg-white shadow-sm overflow-hidden">
-        {isLoading && <p className="text-center text-gray-400 py-8">Loading…</p>}
+      <div className="rounded-2xl bg-card border border-border overflow-hidden">
+        {isLoading && <p className="text-center text-muted-foreground py-8 text-sm">Loading…</p>}
         {!isLoading && filtered.length === 0 && (
-          <p className="text-center text-gray-400 py-8 text-sm">
+          <p className="text-center text-muted-foreground py-8 text-sm">
             {search ? `No gyms match "${search}"` : 'No gyms yet.'}
           </p>
         )}
@@ -260,21 +280,16 @@ function GymRoleRow({ entry, userId }: { entry: AdminUserGym; userId: string }) 
     },
   });
 
-  const toggle = () => {
-    const next = optimisticRole === 'admin' ? 'member' : 'admin';
-    mutation.mutate(next);
-  };
-
   return (
-    <div className="flex items-center justify-between py-1">
-      <span className="text-xs text-gray-700 truncate mr-3">{entry.gym_name}</span>
+    <div className="flex items-center justify-between py-1 gap-3">
+      <span className="text-xs text-foreground truncate">{entry.gym_name}</span>
       <button
-        onClick={toggle}
+        onClick={() => mutation.mutate(optimisticRole === 'admin' ? 'member' : 'admin')}
         disabled={mutation.isPending}
-        className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors disabled:opacity-50 ${
+        className={`text-xs px-2.5 py-0.5 rounded-full font-medium transition-colors disabled:opacity-50 shrink-0 ${
           optimisticRole === 'admin'
-            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            ? 'bg-primary/10 text-primary hover:bg-primary/20'
+            : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
         }`}
       >
         {optimisticRole}
@@ -287,35 +302,45 @@ function UserRow({ user }: { user: AdminUser }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="border-b border-gray-100 last:border-0">
+    <div className="border-b border-border last:border-0">
       <div
         onClick={() => setExpanded(!expanded)}
-        className="flex items-start justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+        className="flex items-start justify-between px-4 py-3 gap-3 cursor-pointer
+          hover:bg-secondary/50 transition-colors"
       >
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium text-gray-900 truncate">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-medium text-foreground truncate">
               {user.full_name ?? user.email}
             </p>
             {user.is_super_admin && (
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">
+              <span className="text-[10px] font-semibold uppercase tracking-wide
+                text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">
                 super admin
               </span>
             )}
           </div>
-          {user.full_name && <p className="text-xs text-gray-400 truncate">{user.email}</p>}
-          <p className="text-xs text-gray-400">{user.gyms.length} gym{user.gyms.length !== 1 ? 's' : ''} · joined {user.created_at.slice(0, 10)}</p>
+          {user.full_name && (
+            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            {user.gyms.length} gym{user.gyms.length !== 1 ? 's' : ''} · joined {user.created_at.slice(0, 10)}
+          </p>
         </div>
-        <span className="text-xs text-gray-400 ml-4 mt-0.5">{expanded ? '▲' : '▼'}</span>
+        <span className="shrink-0 mt-0.5 text-muted-foreground">
+          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </span>
       </div>
 
       {expanded && (
-        <div className="px-4 pb-3 border-t border-gray-50 bg-gray-50">
+        <div className="px-4 pb-3 pt-2 border-t border-border bg-muted/50">
           {user.gyms.length === 0 ? (
-            <p className="text-xs text-gray-400 py-2">Not a member of any gym.</p>
+            <p className="text-xs text-muted-foreground py-1">Not a member of any gym.</p>
           ) : (
-            <div className="pt-2 space-y-0.5">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Gym memberships</p>
+            <div className="space-y-0.5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                Gym memberships
+              </p>
               {user.gyms.map((entry) => (
                 <GymRoleRow key={entry.gym_id} entry={entry} userId={user.id} />
               ))}
@@ -349,16 +374,16 @@ function UsersTab() {
           placeholder="Search users…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+          className={inputCls + ' flex-1'}
         />
-        <span className="text-xs text-gray-400 whitespace-nowrap">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
           {data ? `${filtered.length} of ${data.items.length}` : ''}
         </span>
       </div>
-      <div className="rounded-xl bg-white shadow-sm overflow-hidden">
-        {isLoading && <p className="text-center text-gray-400 py-8">Loading…</p>}
+      <div className="rounded-2xl bg-card border border-border overflow-hidden">
+        {isLoading && <p className="text-center text-muted-foreground py-8 text-sm">Loading…</p>}
         {!isLoading && filtered.length === 0 && (
-          <p className="text-center text-gray-400 py-8 text-sm">
+          <p className="text-center text-muted-foreground py-8 text-sm">
             {search ? `No users match "${search}"` : 'No users yet.'}
           </p>
         )}
@@ -368,7 +393,7 @@ function UsersTab() {
   );
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 type Tab = 'overview' | 'gyms' | 'users';
 
@@ -384,20 +409,19 @@ export default function SuperAdminPage() {
   return (
     <main className="mx-auto max-w-3xl p-4 space-y-4">
       <div>
-        <h1 className="text-lg font-semibold text-gray-900">Platform Admin</h1>
-        <p className="text-xs text-gray-400">Manage all gyms and users across Gymify.</p>
+        <h1 className="font-heading text-3xl font-bold text-foreground">Platform Admin</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Manage all gyms and users across Gymify.</p>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 border-b border-gray-200">
+      <div className="flex gap-0 border-b border-border">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               tab === t.id
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             {t.label}

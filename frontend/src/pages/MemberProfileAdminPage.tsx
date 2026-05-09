@@ -15,63 +15,73 @@ export default function MemberProfileAdminPage() {
 
   return (
     <main className="mx-auto max-w-lg p-4 space-y-4">
-        {isLoading && <p className="text-center text-gray-400 py-8">Loading…</p>}
+      {isLoading && (
+        <p className="text-center text-muted-foreground py-12 text-sm">Loading…</p>
+      )}
 
-        {data && (
-          <>
-            {/* Identity card */}
-            <div className="rounded-xl bg-white p-4 shadow-sm space-y-2">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  {data.full_name && (
-                    <p className="text-base font-semibold text-gray-900">{data.full_name}</p>
-                  )}
-                  <p className="text-sm text-gray-500">{data.email}</p>
-                  {data.phone ? (
-                    <p className="text-sm text-gray-700">{data.phone}</p>
-                  ) : (
-                    <p className="text-sm text-gray-400 italic">No phone number</p>
-                  )}
-                </div>
-                <MembershipBadge status={data.membership.status} />
+      {data && (
+        <>
+          {/* Identity card */}
+          <div className="rounded-2xl bg-card border border-border p-5 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1 min-w-0">
+                {data.full_name && (
+                  <p className="font-heading text-xl font-bold text-foreground">{data.full_name}</p>
+                )}
+                <p className="text-sm text-muted-foreground truncate">{data.email}</p>
+                {data.phone ? (
+                  <p className="text-sm text-foreground">{data.phone}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No phone number</p>
+                )}
               </div>
+              <MembershipBadge status={data.membership.status} />
+            </div>
+            <div className="pt-1 border-t border-border space-y-1">
               {data.membership.end_date && (
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-muted-foreground">
                   Membership until {data.membership.end_date}
                 </p>
               )}
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted-foreground">
                 Joined {new Date(data.joined_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </p>
             </div>
+          </div>
 
-            {/* Stats */}
-            <div className="rounded-xl bg-white px-4 py-4 shadow-sm space-y-4">
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{data.stats.visits_this_week}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">This week</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{data.stats.visits_last_30_days}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Last 30 days</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{data.stats.total_visits}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Total visits</p>
-                </div>
+          {/* Stats card */}
+          <div className="rounded-2xl bg-card border border-border px-5 py-5 space-y-5">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="font-heading text-3xl font-bold text-foreground">
+                  {data.stats.visits_this_week}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">This week</p>
               </div>
-
-              {data.stats.weekly_trend.length > 0 && (
-                <WeeklyTrendBars trend={data.stats.weekly_trend} />
-              )}
-
-              <p className="text-xs text-gray-400 text-center">
-                Member since {new Date(data.stats.member_since).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </p>
+              <div>
+                <p className="font-heading text-3xl font-bold text-foreground">
+                  {data.stats.visits_last_30_days}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
+              </div>
+              <div>
+                <p className="font-heading text-3xl font-bold text-foreground">
+                  {data.stats.total_visits}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Total visits</p>
+              </div>
             </div>
-          </>
-        )}
-      </main>
+
+            {data.stats.weekly_trend.length > 0 && (
+              <WeeklyTrendBars trend={data.stats.weekly_trend} />
+            )}
+
+            <p className="text-xs text-muted-foreground text-center">
+              Member since {new Date(data.stats.member_since).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </p>
+          </div>
+        </>
+      )}
+    </main>
   );
 }

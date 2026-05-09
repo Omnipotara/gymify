@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
 import { getRules, createRule, updateRule, deleteRule, getAllRewards, redeemReward } from '../features/rewards/api';
 import { ApiError } from '../lib/api-client';
 import type { RewardType, RewardRule, CreateRewardRulePayload } from '../features/rewards/types';
+
+const inputCls =
+  'w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-foreground ' +
+  'focus:outline-none focus:ring-2 focus:ring-ring';
 
 const TYPE_LABELS: Record<RewardType, string> = {
   milestone: 'Milestone',
@@ -19,12 +24,11 @@ const TYPE_HINT: Record<RewardType, string> = {
 
 function thresholdLabel(type: RewardType, threshold: number): string {
   if (type === 'milestone') return `${threshold} total visits`;
-  if (type === 'streak') return `${threshold} week streak`;
+  if (type === 'streak') return `${threshold}-week streak`;
   return threshold === 0 ? 'disabled' : `${threshold} days away`;
 }
 
 function RuleForm({
-  gymId,
   initial,
   onSave,
   onCancel,
@@ -41,11 +45,11 @@ function RuleForm({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs text-gray-500">Type</label>
+          <label className="text-xs text-muted-foreground">Type</label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value as RewardType })}
-            className="mt-0.5 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+            className={inputCls + ' mt-0.5'}
           >
             <option value="milestone">Milestone</option>
             <option value="streak">Streak</option>
@@ -53,34 +57,34 @@ function RuleForm({
           </select>
         </div>
         <div>
-          <label className="text-xs text-gray-500">{TYPE_HINT[form.type]}</label>
+          <label className="text-xs text-muted-foreground">{TYPE_HINT[form.type]}</label>
           <input
             type="number"
             min={form.type === 'comeback' ? 0 : 1}
             value={form.threshold}
             onChange={(e) => setForm({ ...form, threshold: Number(e.target.value) })}
-            className="mt-0.5 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+            className={inputCls + ' mt-0.5'}
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500">Discount %</label>
+          <label className="text-xs text-muted-foreground">Discount %</label>
           <input
             type="number"
             min={1}
             max={100}
             value={form.discount_percent}
             onChange={(e) => setForm({ ...form, discount_percent: Number(e.target.value) })}
-            className="mt-0.5 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+            className={inputCls + ' mt-0.5'}
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500">Description shown to member</label>
+          <label className="text-xs text-muted-foreground">Description (shown to member)</label>
           <input
             type="text"
             placeholder="e.g. 10% off next month"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="mt-0.5 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+            className={inputCls + ' mt-0.5'}
           />
         </div>
       </div>
@@ -88,13 +92,15 @@ function RuleForm({
         <button
           onClick={() => onSave(form)}
           disabled={!form.description.trim()}
-          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground
+            hover:bg-primary/90 disabled:opacity-50"
         >
           {saveLabel}
         </button>
         <button
           onClick={onCancel}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+          className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground
+            hover:bg-secondary transition-colors"
         >
           Cancel
         </button>
@@ -132,12 +138,14 @@ function RuleCard({ gymId, rule }: { gymId: string; rule: RewardRule }) {
   });
 
   return (
-    <div className={`rounded-xl bg-white shadow-sm overflow-hidden ${!rule.is_active && mode === 'view' ? 'opacity-50' : ''}`}>
+    <div className={`rounded-2xl bg-card border border-border overflow-hidden transition-opacity ${
+      !rule.is_active && mode === 'view' ? 'opacity-50' : ''
+    }`}>
       {mode === 'view' && (
         <div className="p-4 flex items-start justify-between gap-3">
-          <div className="space-y-0.5 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">{rule.description}</p>
-            <p className="text-xs text-gray-500">
+          <div className="space-y-1 min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">{rule.description}</p>
+            <p className="text-xs text-muted-foreground">
               {TYPE_LABELS[rule.type]} · {thresholdLabel(rule.type, rule.threshold)} · {rule.discount_percent}% off
             </p>
           </div>
@@ -147,21 +155,21 @@ function RuleCard({ gymId, rule }: { gymId: string; rule: RewardRule }) {
               disabled={toggleMutation.isPending}
               className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
                 rule.is_active
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  ? 'bg-green-500/15 text-green-700 dark:text-green-400 hover:bg-green-500/25'
+                  : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
               }`}
             >
               {rule.is_active ? 'Active' : 'Inactive'}
             </button>
             <button
               onClick={() => { setMode('edit'); setError(''); }}
-              className="text-xs text-blue-600 hover:underline"
+              className="text-xs text-primary hover:underline"
             >
               Edit
             </button>
             <button
               onClick={() => setMode('confirmDelete')}
-              className="text-xs text-red-500 hover:underline"
+              className="text-xs text-destructive hover:underline"
             >
               Delete
             </button>
@@ -171,7 +179,7 @@ function RuleCard({ gymId, rule }: { gymId: string; rule: RewardRule }) {
 
       {mode === 'edit' && (
         <div className="p-4 space-y-3">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Edit Rule</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Edit Rule</p>
           <RuleForm
             gymId={gymId}
             initial={{ type: rule.type, threshold: rule.threshold, discount_percent: rule.discount_percent, description: rule.description }}
@@ -179,26 +187,28 @@ function RuleCard({ gymId, rule }: { gymId: string; rule: RewardRule }) {
             onCancel={() => setMode('view')}
             saveLabel={updateMutation.isPending ? 'Saving…' : 'Save'}
           />
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
       )}
 
       {mode === 'confirmDelete' && (
         <div className="p-4 flex items-center justify-between gap-3">
-          <p className="text-sm text-gray-700">
-            Delete <span className="font-medium">"{rule.description}"</span>? This removes all pending rewards earned under this rule.
+          <p className="text-sm text-foreground">
+            Delete <span className="font-medium">"{rule.description}"</span>? This removes all pending rewards.
           </p>
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
-              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              className="rounded-lg bg-destructive px-3 py-1.5 text-xs font-medium
+                text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
             >
               {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
             </button>
             <button
               onClick={() => setMode('view')}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+              className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground
+                hover:bg-secondary transition-colors"
             >
               Cancel
             </button>
@@ -247,91 +257,110 @@ export default function RewardsAdminPage() {
 
   return (
     <main className="mx-auto max-w-lg p-4 space-y-6">
-        {/* ── Reward Rules ── */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-gray-500">Reward Rules</h2>
-            {!showCreate && (
-              <button onClick={() => { setShowCreate(true); setCreateError(''); }} className="text-sm text-blue-600 hover:underline">
-                + New Rule
-              </button>
-            )}
+      {/* ── Rules section ── */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Rules</h2>
+          {!showCreate && (
+            <button
+              onClick={() => { setShowCreate(true); setCreateError(''); }}
+              className="flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Rule
+            </button>
+          )}
+        </div>
+
+        {showCreate && (
+          <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
+            <p className="text-sm font-semibold text-foreground">New Reward Rule</p>
+            <RuleForm
+              gymId={gymId!}
+              initial={{ type: 'milestone', threshold: 10, discount_percent: 10, description: '' }}
+              onSave={(data) => createMutation.mutate(data)}
+              onCancel={() => setShowCreate(false)}
+              saveLabel={createMutation.isPending ? 'Saving…' : 'Create Rule'}
+            />
+            {createError && <p className="text-xs text-destructive">{createError}</p>}
           </div>
-
-          {showCreate && (
-            <div className="rounded-xl bg-white p-4 shadow-sm space-y-3">
-              <p className="text-sm font-semibold text-gray-800">New Reward Rule</p>
-              <RuleForm
-                gymId={gymId!}
-                initial={{ type: 'milestone', threshold: 10, discount_percent: 10, description: '' }}
-                onSave={(data) => createMutation.mutate(data)}
-                onCancel={() => setShowCreate(false)}
-                saveLabel={createMutation.isPending ? 'Saving…' : 'Create Rule'}
-              />
-              {createError && <p className="text-xs text-red-600">{createError}</p>}
-            </div>
-          )}
-
-          {rulesLoading && <p className="text-center text-gray-400 py-4">Loading…</p>}
-
-          {rulesData?.items.length === 0 && !showCreate && (
-            <p className="text-center text-gray-400 py-4 text-sm">
-              No rules yet. Create one to start rewarding members.
-            </p>
-          )}
-
-          {rulesData?.items.map((rule) => (
-            <RuleCard key={rule.id} gymId={gymId!} rule={rule} />
-          ))}
-        </section>
-
-        {/* ── Pending Rewards ── */}
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium text-gray-500">
-            Pending Redemption{pendingRewards.length > 0 && ` (${pendingRewards.length})`}
-          </h2>
-
-          {rewardsLoading && <p className="text-center text-gray-400 py-4">Loading…</p>}
-
-          {!rewardsLoading && pendingRewards.length === 0 && (
-            <p className="text-center text-gray-400 py-4 text-sm">No unredeemed rewards.</p>
-          )}
-
-          {pendingRewards.map((reward) => (
-            <div key={reward.id} className="rounded-xl bg-white p-4 shadow-sm flex items-start justify-between gap-3">
-              <div className="space-y-0.5 min-w-0">
-                <p className="text-sm font-medium text-gray-900">{reward.member_name ?? reward.member_email}</p>
-                {reward.member_name && <p className="text-xs text-gray-400">{reward.member_email}</p>}
-                <p className="text-xs text-gray-600">{reward.rule_description} · {reward.discount_percent}% off</p>
-                <p className="text-xs text-gray-400">Earned {new Date(reward.earned_at).toLocaleDateString()}</p>
-              </div>
-              <button
-                onClick={() => redeemMutation.mutate(reward.id)}
-                disabled={redeemMutation.isPending}
-                className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                Redeem
-              </button>
-            </div>
-          ))}
-        </section>
-
-        {/* ── Redeemed Rewards ── */}
-        {redeemedRewards.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="text-sm font-medium text-gray-500">Redeemed</h2>
-            {redeemedRewards.map((reward) => (
-              <div key={reward.id} className="rounded-xl bg-white p-4 shadow-sm opacity-60">
-                <p className="text-sm text-gray-700">
-                  {reward.member_name ?? reward.member_email} · {reward.rule_description}
-                </p>
-                <p className="text-xs text-gray-400">
-                  Redeemed {new Date(reward.redeemed_at!).toLocaleDateString()}
-                </p>
-              </div>
-            ))}
-          </section>
         )}
-      </main>
+
+        {rulesLoading && <p className="text-center text-muted-foreground py-4 text-sm">Loading…</p>}
+
+        {rulesData?.items.length === 0 && !showCreate && (
+          <p className="text-center text-muted-foreground py-6 text-sm">
+            No rules yet. Create one to start rewarding members.
+          </p>
+        )}
+
+        {rulesData?.items.map((rule) => (
+          <RuleCard key={rule.id} gymId={gymId!} rule={rule} />
+        ))}
+      </section>
+
+      {/* ── Pending redemptions ── */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          Pending Redemption{pendingRewards.length > 0 && ` (${pendingRewards.length})`}
+        </h2>
+
+        {rewardsLoading && <p className="text-center text-muted-foreground py-4 text-sm">Loading…</p>}
+
+        {!rewardsLoading && pendingRewards.length === 0 && (
+          <p className="text-center text-muted-foreground py-4 text-sm">No unredeemed rewards.</p>
+        )}
+
+        {pendingRewards.map((reward) => (
+          <div
+            key={reward.id}
+            className="rounded-2xl bg-card border border-border p-4 flex items-start justify-between gap-3"
+          >
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {reward.member_name ?? reward.member_email}
+              </p>
+              {reward.member_name && (
+                <p className="text-xs text-muted-foreground truncate">{reward.member_email}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {reward.rule_description} · {reward.discount_percent}% off
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Earned {new Date(reward.earned_at).toLocaleDateString()}
+              </p>
+            </div>
+            <button
+              onClick={() => redeemMutation.mutate(reward.id)}
+              disabled={redeemMutation.isPending}
+              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium
+                text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              Redeem
+            </button>
+          </div>
+        ))}
+      </section>
+
+      {/* ── Redeemed ── */}
+      {redeemedRewards.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Redeemed</h2>
+          {redeemedRewards.map((reward) => (
+            <div
+              key={reward.id}
+              className="rounded-2xl bg-card border border-border p-4 opacity-50"
+            >
+              <p className="text-sm text-foreground">
+                {reward.member_name ?? reward.member_email} · {reward.rule_description}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Redeemed {new Date(reward.redeemed_at!).toLocaleDateString()}
+              </p>
+            </div>
+          ))}
+        </section>
+      )}
+    </main>
   );
 }

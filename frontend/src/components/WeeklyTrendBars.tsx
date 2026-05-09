@@ -12,12 +12,14 @@ export function WeeklyTrendBars({ trend }: { trend: WeeklyVisit[] }) {
         const pct = (w.visits / max) * 100;
         return (
           <div key={w.week_offset} className="flex flex-col items-center gap-1 flex-1">
-            <span className="text-xs font-medium text-gray-600">{w.visits}</span>
+            <span className="text-xs font-medium text-foreground">{w.visits}</span>
             <div
-              className="w-full rounded-t-sm bg-blue-400"
+              className="w-full rounded-t-sm bg-primary/60"
               style={{ height: `${Math.max(pct * 0.56, w.visits > 0 ? 6 : 2)}px` }}
             />
-            <span className="text-[10px] text-gray-400 text-center leading-tight whitespace-nowrap">{label}</span>
+            <span className="text-[10px] text-muted-foreground text-center leading-tight whitespace-nowrap">
+              {label}
+            </span>
           </div>
         );
       })}

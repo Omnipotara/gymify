@@ -4,6 +4,19 @@ A running list of non-obvious decisions and the reasoning behind them. New entri
 
 ---
 
+## 2026-05-09 — Complete frontend visual overhaul: dark-first, mobile-first
+
+**Direction**: Dark mode as the default; premium fitness app aesthetic; vivid blue (`#3263cf`) as the brand accent; Barlow Condensed for headings, Inter for body.
+**Reference**: A purple-dark fitness app mockup (colours changed to blue).
+**Navigation**: Bottom tab bar on mobile (context-aware — different tabs for member vs admin vs top-level); persistent sidebar on desktop. Replaced the hamburger+drawer pattern entirely.
+**Theme engine**: `next-themes` with `attribute="class"`; default dark; localStorage key `gymify-theme`; anti-flash inline script in `index.html`.
+**Styling approach**: Raw Tailwind + CSS custom property tokens. No component library (shadcn/ui, MUI, etc.) — avoids third-party class name collisions and keeps the bundle lean.
+**Why dark-first**: Members check in on their phones in gym environments which are often dimly lit. Dark mode is easier on the eyes and aligns with the premium fitness app aesthetic the product targets.
+**Why bottom nav over sidebar on mobile**: Thumb reachability. Sidebar drawers require a tap on a small hamburger icon in the top corner — harder to hit one-handed. Bottom tabs are always visible and reachable.
+**Design doc**: `docs/frontend-design.md` — tokens, patterns, component conventions.
+
+---
+
 ## 2026-04-26 — Slice 4 loyalty system design
 **Reward types**: milestone (N total visits), streak (N consecutive calendar weeks with 2+ visits), comeback (return after N days inactive).
 **Real value**: rewards carry a % discount stored on the record; redemption details TBD.
