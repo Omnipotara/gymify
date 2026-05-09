@@ -72,7 +72,7 @@ export default function GymPage() {
   return (
     <main className="mx-auto max-w-lg p-4 space-y-4">
       {/* ── Check-in card ── */}
-      <div className={`rounded-2xl bg-card border overflow-hidden ${scanning ? 'border-primary/40' : 'border-border'}`}>
+      <div className={`rounded-2xl bg-card overflow-hidden ${scanning ? 'border-2 border-primary/40' : 'border border-border'}`}>
         <div className="px-5 py-5 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-2xl font-bold">Check In</h2>

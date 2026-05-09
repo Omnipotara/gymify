@@ -233,7 +233,7 @@ export default function AdminPage() {
         {/* ── Members column ── */}
         <div className="flex-1 min-w-0 space-y-3">
           {/* QR Codes */}
-          <div className={`rounded-2xl bg-card border overflow-hidden ${showQr ? 'border-primary/40' : 'border-border'}`}>
+          <div className={`rounded-2xl bg-card overflow-hidden ${showQr ? 'border-2 border-primary/40' : 'border border-border'}`}>
             <div className="px-4 py-3 flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-1.5 mr-auto">
                 <QrCode className="w-4 h-4 text-muted-foreground" />
@@ -301,7 +301,7 @@ export default function AdminPage() {
             const isActive = member.membership.status === 'active' || member.membership.status === 'expiring_soon';
             const isExpanded = expandedId === member.id;
             return (
-              <div key={member.id} className={`rounded-2xl bg-card border overflow-hidden ${isExpanded ? 'border-primary/40' : 'border-border'}`}>
+              <div key={member.id} className={`rounded-2xl bg-card overflow-hidden ${isExpanded ? 'border-2 border-primary/40' : 'border border-border'}`}>
                 <div
                   onClick={() => navigate(`/gyms/${gymId}/admin/members/${member.id}`)}
                   className="p-4 flex items-start justify-between gap-3 cursor-pointer

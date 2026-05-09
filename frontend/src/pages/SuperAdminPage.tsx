@@ -178,7 +178,7 @@ function GymRow({ gym }: { gym: AdminGym }) {
   });
 
   return (
-    <div className={`border-b last:border-b-0 ${expanded ? 'border-primary/40' : 'border-border'}`}>
+    <div className={`border-b-2 last:border-b-0 ${expanded ? 'border-primary/40' : 'border-border'}`}>
       <div className="flex items-center justify-between px-4 py-3 gap-3">
         <button onClick={() => setExpanded(!expanded)} className="min-w-0 flex-1 text-left">
           <p className="text-sm font-medium text-foreground truncate">{gym.name}</p>
@@ -302,7 +302,7 @@ function UserRow({ user }: { user: AdminUser }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className={`border-b last:border-b-0 ${expanded ? 'border-primary/40' : 'border-border'}`}>
+    <div className={`border-b-2 last:border-b-0 ${expanded ? 'border-primary/40' : 'border-border'}`}>
       <div
         onClick={() => setExpanded(!expanded)}
         className="flex items-start justify-between px-4 py-3 gap-3 cursor-pointer

@@ -140,7 +140,7 @@ function RuleCard({ gymId, rule }: { gymId: string; rule: RewardRule }) {
   return (
     <div className={`rounded-2xl bg-card border overflow-hidden transition-opacity ${
       !rule.is_active && mode === 'view' ? 'opacity-50' : ''
-    } ${mode !== 'view' ? 'border-primary/40' : 'border-border'}`}>
+    } ${mode !== 'view' ? 'border-2 border-primary/40' : 'border border-border'}`}>
       {mode === 'view' && (
         <div className="p-4 flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
