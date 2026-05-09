@@ -1,52 +1,67 @@
-import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useParams, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import {
+  Home,
+  Users,
+  BarChart3,
+  Gift,
+  User,
+  QrCode,
+  Shield,
+  Dumbbell,
+  LogOut,
+} from 'lucide-react';
 import { useAuth } from '../lib/auth-context';
 import { getMyGyms } from '../features/gyms/api';
+import { ThemeToggle } from './ThemeToggle';
+import { cn } from '../lib/utils';
 
-function MenuIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  );
-}
-
-function NavItem({
-  to,
-  children,
-  end = false,
-  extraActivePaths = [],
-}: {
+interface TabItem {
   to: string;
-  children: React.ReactNode;
+  icon: React.ElementType;
+  label: string;
   end?: boolean;
   extraActivePaths?: string[];
-}) {
+}
+
+function SidebarNavItem({ to, icon: Icon, label, end = false, extraActivePaths = [] }: TabItem) {
   const { pathname } = useLocation();
   const extraActive = extraActivePaths.some((p) => pathname.startsWith(p));
-
   return (
     <NavLink
       to={to}
       end={end}
       className={({ isActive }) =>
-        `block px-3 py-2 text-sm rounded-lg mx-2 transition-colors ${
+        cn(
+          'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
           isActive || extraActive
-            ? 'bg-blue-50 text-blue-700 font-medium'
-            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-        }`
+            ? 'bg-primary/10 text-primary'
+            : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+        )
       }
     >
-      {children}
+      <Icon className="w-4 h-4 shrink-0" />
+      {label}
+    </NavLink>
+  );
+}
+
+function BottomTab({ to, icon: Icon, label, end = false, extraActivePaths = [] }: TabItem) {
+  const { pathname } = useLocation();
+  const extraActive = extraActivePaths.some((p) => pathname.startsWith(p));
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) =>
+        cn(
+          'flex flex-col items-center gap-1 flex-1 py-2 rounded-xl transition-colors',
+          isActive || extraActive ? 'text-primary' : 'text-muted-foreground',
+        )
+      }
+    >
+      <Icon className="w-5 h-5" />
+      <span className="text-[10px] font-medium leading-none">{label}</span>
     </NavLink>
   );
 }
@@ -55,10 +70,6 @@ export default function AppLayout() {
   const { gymId } = useParams<{ gymId?: string }>();
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // Close sidebar on navigation
-  useEffect(() => setSidebarOpen(false), [pathname]);
 
   const { data: gymsData } = useQuery({
     queryKey: ['my-gyms'],
@@ -69,118 +80,120 @@ export default function AppLayout() {
   const isAdmin = gym?.role === 'admin';
   const isMember = gym?.role === 'member';
 
-  const sidebarContent = (
-    <>
-      <div className="flex-1 overflow-y-auto py-3 space-y-0.5">
-        {gym && (
-          <>
-            <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-widest truncate">
-              {gym.name}
-            </p>
-            {isAdmin && (
-              <>
-                <NavItem
-                  to={`/gyms/${gymId}/admin`}
-                  end
-                  extraActivePaths={[`/gyms/${gymId}/admin/members/`]}
-                >
-                  Members
-                </NavItem>
-                <NavItem to={`/gyms/${gymId}/admin/analytics`}>Analytics</NavItem>
-                <NavItem to={`/gyms/${gymId}/admin/rewards`}>Rewards</NavItem>
-              </>
-            )}
-            {isMember && (
-              <NavItem to={`/gyms/${gymId}`} end>
-                Check In
-              </NavItem>
-            )}
-            <div className="mx-4 my-2 border-t border-gray-100" />
-          </>
-        )}
+  const contextItems: TabItem[] =
+    gymId && isAdmin
+      ? [
+          { to: `/gyms/${gymId}/admin`, icon: Users, label: 'Members', end: true, extraActivePaths: [`/gyms/${gymId}/admin/members/`] },
+          { to: `/gyms/${gymId}/admin/analytics`, icon: BarChart3, label: 'Analytics' },
+          { to: `/gyms/${gymId}/admin/rewards`, icon: Gift, label: 'Rewards' },
+        ]
+      : gymId && isMember
+      ? [{ to: `/gyms/${gymId}`, icon: QrCode, label: 'Check In', end: true }]
+      : [];
 
-        {user?.is_super_admin && (
-          <>
-            <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-              Platform
-            </p>
-            <NavItem to="/super-admin">Admin Panel</NavItem>
-            <div className="mx-4 my-2 border-t border-gray-100" />
-          </>
-        )}
+  const sidebarItems: TabItem[] = [
+    { to: '/gyms', icon: Home, label: 'My Gyms', end: true },
+    ...contextItems,
+    ...(!gymId && user?.is_super_admin ? [{ to: '/super-admin', icon: Shield, label: 'Super Admin' }] : []),
+    { to: '/profile', icon: User, label: 'Profile' },
+  ];
 
-        <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-          Account
-        </p>
-        <NavItem to="/gyms" end>My Gyms</NavItem>
-        <NavItem to="/profile">Profile</NavItem>
-      </div>
+  const bottomTabs: TabItem[] =
+    gymId && isAdmin
+      ? [
+          { to: `/gyms/${gymId}/admin`, icon: Users, label: 'Members', end: true, extraActivePaths: [`/gyms/${gymId}/admin/members/`] },
+          { to: `/gyms/${gymId}/admin/analytics`, icon: BarChart3, label: 'Stats' },
+          { to: `/gyms/${gymId}/admin/rewards`, icon: Gift, label: 'Rewards' },
+          { to: '/profile', icon: User, label: 'Profile' },
+        ]
+      : gymId && isMember
+      ? [
+          { to: '/gyms', icon: Home, label: 'My Gyms', end: true },
+          { to: `/gyms/${gymId}`, icon: QrCode, label: 'Check In', end: true },
+          { to: '/profile', icon: User, label: 'Profile' },
+        ]
+      : [
+          { to: '/gyms', icon: Dumbbell, label: 'Gyms', end: true },
+          ...(user?.is_super_admin ? [{ to: '/super-admin', icon: Shield, label: 'Admin' }] : []),
+          { to: '/profile', icon: User, label: 'Profile' },
+        ];
 
-      <div className="border-t border-gray-200 px-4 py-3 space-y-1.5">
-        <p className="text-xs text-gray-500 truncate">{user?.full_name ?? user?.email}</p>
-        {user?.full_name && <p className="text-xs text-gray-400 truncate">{user?.email}</p>}
-        <button onClick={logout} className="text-xs text-red-500 hover:text-red-700 transition-colors">
-          Sign out
-        </button>
-      </div>
-    </>
-  );
+  const mobileTitle = (() => {
+    if (pathname === '/profile') return 'Profile';
+    if (pathname === '/super-admin') return 'Super Admin';
+    if (pathname === '/gyms') return 'My Gyms';
+    if (gymId && gym) {
+      if (pathname.includes('/admin/members/')) return 'Member';
+      if (pathname.endsWith('/admin/analytics')) return 'Analytics';
+      if (pathname.endsWith('/admin/rewards')) return 'Rewards';
+      return gym.name;
+    }
+    return 'Gymify';
+  })();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ── Mobile top bar ── */}
-      <div className="md:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="p-1 text-gray-600 hover:text-gray-900 transition-colors"
-          aria-label="Open menu"
-        >
-          <MenuIcon />
-        </button>
-        <span className="text-base font-bold text-blue-600">Gymify</span>
-        {gym && (
-          <span className="text-sm text-gray-400 truncate">{gym.name}</span>
-        )}
-      </div>
-
-      {/* ── Backdrop (mobile) ── */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-30 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ── Sidebar ── */}
-      <nav
-        className={`fixed inset-y-0 left-0 w-64 md:w-52 bg-white border-r border-gray-200 flex flex-col z-40
-          transition-transform duration-200 ease-in-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
-      >
-        {/* Desktop logo */}
-        <div className="hidden md:block px-4 py-4 border-b border-gray-100">
-          <span className="text-lg font-bold text-blue-600">Gymify</span>
+    <div className="min-h-screen bg-background">
+      {/* ── Desktop sidebar ── */}
+      <nav className="hidden md:flex w-60 flex-col fixed inset-y-0 left-0 bg-card border-r border-border z-40">
+        <div className="px-5 py-5 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <Dumbbell className="w-5 h-5 text-primary" />
+            <span className="font-heading text-xl font-bold tracking-tight">Gymify</span>
+          </div>
+          {gym && <p className="text-xs text-muted-foreground mt-1 truncate">{gym.name}</p>}
         </div>
 
-        {/* Mobile sidebar header with close button */}
-        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <span className="text-base font-bold text-blue-600">Gymify</span>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
-            aria-label="Close menu"
-          >
-            <CloseIcon />
-          </button>
+        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
+          {sidebarItems.map((item) => (
+            <SidebarNavItem key={item.to + item.label} {...item} />
+          ))}
         </div>
 
-        {sidebarContent}
+        <div className="border-t border-border px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{user?.full_name ?? user?.email}</p>
+              {user?.full_name && (
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              )}
+              <button
+                onClick={logout}
+                className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors"
+              >
+                <LogOut className="w-3 h-3" />
+                Sign out
+              </button>
+            </div>
+            <ThemeToggle />
+          </div>
+        </div>
       </nav>
 
       {/* ── Page content ── */}
-      <div className="md:ml-52 min-h-screen md:pt-6">
+      <div className="md:ml-60 min-h-screen pb-24 md:pb-0">
+        {/* Mobile top bar */}
+        <div className="md:hidden sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Dumbbell className="w-4 h-4 text-primary" />
+            <span className="font-heading text-lg font-bold">{mobileTitle}</span>
+          </div>
+          <ThemeToggle />
+        </div>
+
         <Outlet />
       </div>
+
+      {/* ── Mobile bottom nav ── */}
+      <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-card/95 backdrop-blur-sm border-t border-border z-40">
+        <div
+          className="flex items-center px-2 pt-1"
+          style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+        >
+          {bottomTabs.map((tab) => (
+            <BottomTab key={tab.to + tab.label} {...tab} />
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }

@@ -1,9 +1,16 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Dumbbell, ArrowLeft } from 'lucide-react';
 import { forgotPassword, resetPassword } from '../features/auth/api';
 import { ApiError } from '../lib/api-client';
 
 type Step = 'request' | 'verify';
+
+const inputClass =
+  'w-full rounded-xl border px-4 py-3 text-sm transition-colors ' +
+  'bg-white border-border text-foreground placeholder:text-muted-foreground ' +
+  'dark:bg-white/10 dark:border-white/20 dark:text-white dark:placeholder:text-white/40 ' +
+  'focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-white/30';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -48,102 +55,132 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm space-y-6 rounded-xl bg-white p-8 shadow">
+    <div className="auth-gradient min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 dark:bg-white/10 mb-4">
+            <Dumbbell className="w-8 h-8 text-primary dark:text-white" />
+          </div>
+          <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground dark:text-white">
+            {step === 'request' ? 'Reset Password' : 'Enter Code'}
+          </h1>
+          <p className="text-sm text-muted-foreground dark:text-white/50 mt-1">
+            {step === 'request'
+              ? "We'll send a 6-digit code to your email"
+              : <>Check <span className="font-medium dark:text-white/80">{email}</span> for your code</>}
+          </p>
+        </div>
+
         {step === 'request' ? (
-          <>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Forgot password?</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Enter your email and we'll send you a 6-digit reset code.
-              </p>
+          <form onSubmit={handleRequest} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-foreground dark:text-white/80">
+                Email
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className={inputClass}
+              />
             </div>
-            <form onSubmit={handleRequest} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {loading ? 'Sending…' : 'Send reset code'}
-              </button>
-            </form>
-          </>
+
+            {error && <p className="text-sm text-destructive dark:text-red-400">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 rounded-xl py-3.5 text-sm font-semibold transition-all
+                bg-primary text-primary-foreground hover:bg-primary/90
+                dark:bg-white dark:text-[#0d2251] dark:hover:bg-white/90
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Sending…' : 'Send reset code'}
+            </button>
+          </form>
         ) : (
-          <>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Enter reset code</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Check <span className="font-medium text-gray-700">{email}</span> for your 6-digit code.
-              </p>
+          <form onSubmit={handleReset} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-foreground dark:text-white/80">
+                6-digit code
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
+                required
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000"
+                className={
+                  inputClass + ' text-center text-2xl font-mono tracking-[0.5em] font-bold'
+                }
+              />
             </div>
-            <form onSubmit={handleReset} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">6-digit code</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="\d{6}"
-                  maxLength={6}
-                  required
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="000000"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-center text-xl font-mono tracking-widest focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">New password</label>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Confirm password</label>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {loading ? 'Resetting…' : 'Reset password'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setStep('request'); setError(''); setCode(''); }}
-                className="w-full text-sm text-gray-500 hover:text-gray-700"
-              >
-                Didn't get the code? Send again
-              </button>
-            </form>
-          </>
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-foreground dark:text-white/80">
+                New password
+              </label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                className={inputClass}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-foreground dark:text-white/80">
+                Confirm password
+              </label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Same as above"
+                className={inputClass}
+              />
+            </div>
+
+            {error && <p className="text-sm text-destructive dark:text-red-400">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 rounded-xl py-3.5 text-sm font-semibold transition-all
+                bg-primary text-primary-foreground hover:bg-primary/90
+                dark:bg-white dark:text-[#0d2251] dark:hover:bg-white/90
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Resetting…' : 'Reset password'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setStep('request'); setError(''); setCode(''); }}
+              className="w-full text-sm text-muted-foreground dark:text-white/50 hover:text-foreground dark:hover:text-white/80 transition-colors py-1"
+            >
+              Didn't get the code? Send again
+            </button>
+          </form>
         )}
-        <p className="text-center text-sm text-gray-500">
-          <Link to="/login" className="text-blue-600 hover:underline">
+
+        <p className="mt-6 text-center text-sm text-muted-foreground dark:text-white/50">
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-1.5 text-primary dark:text-blue-300 hover:underline"
+          >
+            <ArrowLeft className="w-3 h-3" />
             Back to sign in
           </Link>
         </p>

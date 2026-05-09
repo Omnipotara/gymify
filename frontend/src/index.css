@@ -2,27 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
-/* react-phone-number-input — match our input style */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --primary: 221 62% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 221 62% 95%;
+    --accent-foreground: 221 62% 40%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 62% 50%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --card: 222 40% 10%;
+    --card-foreground: 210 40% 98%;
+    --primary: 221 72% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 35% 16%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 222 35% 14%;
+    --muted-foreground: 215 20% 60%;
+    --accent: 222 35% 16%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 35% 18%;
+    --input: 222 35% 18%;
+    --ring: 221 72% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Barlow Condensed', sans-serif;
+  }
+}
+
+/* Auth page background — gradient in dark mode, plain in light */
+.auth-gradient {
+  @apply bg-background;
+}
+.dark .auth-gradient {
+  background: linear-gradient(145deg, #112a5c 0%, #060c18 100%);
+}
+
+/* react-phone-number-input */
 .PhoneInput {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-}
-.PhoneInput:focus-within {
-  border-color: #3b82f6;
-  outline: none;
 }
 .PhoneInputInput {
   flex: 1;
   border: none;
   outline: none;
-  font-size: 0.875rem;
   background: transparent;
+  font-size: 0.875rem;
+  color: inherit;
+  min-width: 0;
 }
 .PhoneInputCountrySelect {
   border: none;
@@ -30,4 +93,5 @@
   background: transparent;
   font-size: 0.875rem;
   cursor: pointer;
+  color: inherit;
 }
