@@ -8,8 +8,9 @@ const COOKIE_NAME = 'token';
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: config.isProd,
-  sameSite: 'strict' as const,
-  maxAge: 60 * 60 * 1000, // 1 hour — matches JWT expiry
+  // cross-origin in prod (Railway API ↔ Render frontend): 'none' requires secure:true
+  sameSite: (config.isProd ? 'none' : 'strict') as 'none' | 'strict',
+  maxAge: 60 * 60 * 1000,
   path: '/',
 };
 

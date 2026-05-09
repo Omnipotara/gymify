@@ -3,6 +3,7 @@ import { config } from '../config';
 
 export const pool = new Pool({
   connectionString: config.databaseUrl,
+  ssl: config.isProd ? { rejectUnauthorized: false } : false,
 });
 
 pool.on('error', (err) => {

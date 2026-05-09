@@ -8,6 +8,8 @@
     "start": "node dist/server.js",
     "migrate": "dotenv -e .env -- node-pg-migrate -m migrations up",
     "migrate:down": "dotenv -e .env -- node-pg-migrate -m migrations down",
+    "migrate:prod": "node-pg-migrate -m migrations up",
+    "start:prod": "npm run migrate:prod && node dist/server.js",
     "seed": "dotenv -e .env -- tsx src/db/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
