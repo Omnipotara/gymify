@@ -10,10 +10,6 @@ const inputCls =
   'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground ' +
   'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring';
 
-const phoneWrapperCls =
-  'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground ' +
-  'focus-within:ring-2 focus-within:ring-ring';
-
 export default function ProfilePage() {
   const queryClient = useQueryClient();
 
@@ -71,14 +67,12 @@ export default function ProfilePage() {
 
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1.5">Phone number</label>
-            <div className={phoneWrapperCls}>
-              <PhoneInput
-                international
-                defaultCountry="RS"
-                value={phone}
-                onChange={(val) => setPhone(val)}
-              />
-            </div>
+            <PhoneInput
+              international
+              defaultCountry="RS"
+              value={phone}
+              onChange={(val) => setPhone(val)}
+            />
             {phone && (
               <button
                 onClick={() => setPhone(undefined)}

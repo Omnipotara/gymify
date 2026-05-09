@@ -13,12 +13,6 @@ const inputClass =
   'dark:bg-white/10 dark:border-white/20 dark:text-white dark:placeholder:text-white/40 ' +
   'focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-white/30';
 
-const phoneWrapperClass =
-  'w-full rounded-xl border px-4 py-3 text-sm transition-colors ' +
-  'bg-white border-border text-foreground ' +
-  'dark:bg-white/10 dark:border-white/20 dark:text-white ' +
-  'focus-within:ring-2 focus-within:ring-primary dark:focus-within:ring-white/30';
-
 export default function RegisterPage() {
   const { login: setAuth } = useAuth();
   const navigate = useNavigate();
@@ -107,14 +101,12 @@ export default function RegisterPage() {
             <label className="block text-sm font-medium text-foreground dark:text-white/80">
               Phone <span className="text-muted-foreground dark:text-white/40 font-normal">(optional)</span>
             </label>
-            <div className={phoneWrapperClass}>
-              <PhoneInput
-                international
-                defaultCountry="RS"
-                value={phone}
-                onChange={(val) => setPhone(val)}
-              />
-            </div>
+            <PhoneInput
+              international
+              defaultCountry="RS"
+              value={phone}
+              onChange={(val) => setPhone(val)}
+            />
           </div>
 
           {error && <p className="text-sm text-destructive dark:text-red-400">{error}</p>}

@@ -91,12 +91,21 @@ export default function AppLayout() {
       ? [{ to: `/gyms/${gymId}`, icon: QrCode, label: 'Check In', end: true }]
       : [];
 
-  const sidebarItems: TabItem[] = [
-    { to: '/gyms', icon: Home, label: 'My Gyms', end: true },
-    ...contextItems,
-    ...(!gymId && user?.is_super_admin ? [{ to: '/super-admin', icon: Shield, label: 'Super Admin' }] : []),
-    { to: '/profile', icon: User, label: 'Profile' },
-  ];
+  const sidebarItems: TabItem[] = gymId
+    ? [
+        { to: '/gyms', icon: Home, label: 'My Gyms', end: true },
+        ...contextItems,
+        { to: '/profile', icon: User, label: 'Profile' },
+      ]
+    : user?.is_super_admin
+    ? [
+        { to: '/super-admin', icon: Shield, label: 'Super Admin' },
+        { to: '/profile', icon: User, label: 'Profile' },
+      ]
+    : [
+        { to: '/gyms', icon: Home, label: 'My Gyms', end: true },
+        { to: '/profile', icon: User, label: 'Profile' },
+      ];
 
   const bottomTabs: TabItem[] =
     gymId && isAdmin
@@ -112,9 +121,13 @@ export default function AppLayout() {
           { to: `/gyms/${gymId}`, icon: QrCode, label: 'Check In', end: true },
           { to: '/profile', icon: User, label: 'Profile' },
         ]
+      : user?.is_super_admin
+      ? [
+          { to: '/super-admin', icon: Shield, label: 'Admin' },
+          { to: '/profile', icon: User, label: 'Profile' },
+        ]
       : [
           { to: '/gyms', icon: Dumbbell, label: 'Gyms', end: true },
-          ...(user?.is_super_admin ? [{ to: '/super-admin', icon: Shield, label: 'Admin' }] : []),
           { to: '/profile', icon: User, label: 'Profile' },
         ];
 

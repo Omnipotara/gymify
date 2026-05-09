@@ -71,21 +71,45 @@
   background: linear-gradient(145deg, #112a5c 0%, #060c18 100%);
 }
 
-/* react-phone-number-input */
+/* react-phone-number-input — styled directly so no wrapper div is needed */
 .PhoneInput {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   width: 100%;
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  padding: 0.5rem 0.75rem;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  cursor: text;
+  transition: box-shadow 0.15s;
+}
+.PhoneInput:focus-within {
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+/* Frosted glass on the dark auth gradient */
+.dark .auth-gradient .PhoneInput {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 .PhoneInputInput {
   flex: 1;
+  min-width: 0;
   border: none;
   outline: none;
   background: transparent;
   font-size: 0.875rem;
   color: inherit;
-  min-width: 0;
+  cursor: text;
+  touch-action: manipulation;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.dark .auth-gradient .PhoneInputInput::placeholder {
+  color: rgba(255, 255, 255, 0.4);
 }
 .PhoneInputCountrySelect {
   border: none;
@@ -94,4 +118,5 @@
   font-size: 0.875rem;
   cursor: pointer;
   color: inherit;
+  touch-action: manipulation;
 }

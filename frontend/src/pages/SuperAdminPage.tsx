@@ -361,6 +361,7 @@ function UsersTab() {
   });
 
   const filtered = (data?.items ?? []).filter((u) => {
+    if (u.is_super_admin) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (u.full_name ?? '').toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
