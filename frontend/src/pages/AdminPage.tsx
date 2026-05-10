@@ -312,15 +312,15 @@ export default function AdminPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setShowCheckinQr(!showCheckinQr); setShowJoinQr(false); }}
-                  className="text-xs text-primary hover:underline"
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${showCheckinQr ? 'bg-primary text-primary-foreground' : 'border border-border text-foreground hover:bg-secondary'}`}
                 >
-                  {showCheckinQr ? 'Hide Check-in QR' : 'Show Check-in QR'}
+                  Check-in QR
                 </button>
                 <button
                   onClick={() => { setShowJoinQr(!showJoinQr); setShowCheckinQr(false); }}
-                  className="text-xs text-primary hover:underline"
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${showJoinQr ? 'bg-primary text-primary-foreground' : 'border border-border text-foreground hover:bg-secondary'}`}
                 >
-                  {showJoinQr ? 'Hide Join QR' : 'Show Join QR'}
+                  Join QR
                 </button>
               </div>
             </div>
@@ -416,7 +416,7 @@ export default function AdminPage() {
         </div>
 
         {/* ── Live check-in log ── */}
-        <div className="w-full lg:w-68 lg:shrink-0">
+        <div className="w-full lg:w-72 lg:shrink-0">
           <div className="rounded-2xl bg-card border border-border overflow-hidden">
             <div className="px-4 py-3 flex items-center gap-2 border-b border-border">
               <h2 className="text-sm font-medium">Live Check-ins</h2>
