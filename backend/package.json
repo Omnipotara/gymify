@@ -10,6 +10,7 @@
     "migrate:down": "dotenv -e .env -- node-pg-migrate -m migrations down",
     "migrate:prod": "node-pg-migrate -m migrations up",
     "start:prod": "npm run migrate:prod && node dist/server.js",
+    "promote-super-admin": "node dist/db/promote-super-admin.js",
     "seed": "dotenv -e .env -- tsx src/db/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
