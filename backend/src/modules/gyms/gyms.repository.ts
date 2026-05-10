@@ -53,7 +53,7 @@ export async function getMembers(gymId: string): Promise<MemberRow[]> {
          end_date DESC
        LIMIT 1
      ) latest ON true
-     WHERE ug.gym_id = $1
+     WHERE ug.gym_id = $1 AND ug.role = 'member'
      ORDER BY u.full_name NULLS LAST, u.email`,
     [gymId],
   );
