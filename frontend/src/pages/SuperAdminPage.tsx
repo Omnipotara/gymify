@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { ApiError } from '../lib/api-client';
 import {
   getPlatformStats,
@@ -166,6 +167,7 @@ function GymAdminPanel({ gym }: { gym: AdminGym }) {
 
 function GymRow({ gym }: { gym: AdminGym }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -190,6 +192,14 @@ function GymRow({ gym }: { gym: AdminGym }) {
           <span className="text-xs text-muted-foreground hidden sm:inline">
             {gym.created_at.slice(0, 10)}
           </span>
+          <button
+            onClick={() => navigate(`/gyms/${gym.id}/admin`)}
+            className="text-xs text-primary hover:underline whitespace-nowrap flex items-center gap-1"
+            title="Open gym admin panel"
+          >
+            <ExternalLink className="w-3 h-3" />
+            <span className="hidden sm:inline">Open</span>
+          </button>
           <button
             onClick={() => setExpanded(!expanded)}
             className="text-muted-foreground hover:text-foreground transition-colors"
