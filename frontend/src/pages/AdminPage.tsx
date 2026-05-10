@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, QrCode } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { getMembers, createMembership, patchMembership, endMembershipsForUser } from '../features/memberships/api';
 import { getGymCheckInLog } from '../features/checkins/api';
-import { getJoinQrPayload } from '../features/gyms/api';
+import { getJoinQrPayload, getCheckinQrPayload } from '../features/gyms/api';
 import { MembershipBadge } from '../components/MembershipBadge';
 import { ApiError } from '../lib/api-client';
 import type { MemberWithStatus } from '../features/memberships/types';
@@ -81,6 +81,75 @@ function JoinQrPanel({ gymId }: { gymId: string }) {
       <p className="text-xs text-muted-foreground text-center">
         Static — share once with new members
       </p>
+    </div>
+  );
+}
+
+const CHECKIN_QR_REFRESH_MS = 28_000;
+
+function CheckinQrPanel({ gymId }: { gymId: string }) {
+  const [qrValue, setQrValue] = useState('');
+  const [expiresAt, setExpiresAt] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [error, setError] = useState('');
+
+  const fetchQr = useCallback(async () => {
+    try {
+      setError('');
+      const data = await getCheckinQrPayload(gymId);
+      setQrValue(JSON.stringify(data.payload));
+      setExpiresAt(data.expires_at);
+    } catch {
+      setError('Failed to load QR code.');
+    }
+  }, [gymId]);
+
+  useEffect(() => {
+    fetchQr();
+    const id = setInterval(fetchQr, CHECKIN_QR_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [fetchQr]);
+
+  useEffect(() => {
+    if (expiresAt === 0) return;
+    const id = setInterval(() => {
+      setTimeLeft(Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000)));
+    }, 200);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  const progress = expiresAt > 0 ? Math.max(0, (expiresAt - Date.now()) / 30_000) * 100 : 100;
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-2">
+      <div className="rounded-xl bg-white p-3 border border-border">
+        {error ? (
+          <div className="w-32 h-32 flex items-center justify-center">
+            <p className="text-xs text-destructive text-center">{error}</p>
+          </div>
+        ) : qrValue ? (
+          <QRCode value={qrValue} size={128} />
+        ) : (
+          <div className="w-32 h-32 flex items-center justify-center">
+            <div className="h-5 w-5 rounded-full border-2 border-border border-t-primary animate-spin" />
+          </div>
+        )}
+      </div>
+      <div className="w-full max-w-[160px] space-y-1">
+        <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">
+          <div className="h-full rounded-full bg-primary transition-none" style={{ width: `${progress}%` }} />
+        </div>
+        <p className="text-xs text-muted-foreground text-center">
+          {timeLeft > 0 ? `Refreshes in ${timeLeft}s` : 'Refreshing…'}
+        </p>
+      </div>
+      <button
+        onClick={() => window.open(`/gyms/${gymId}/checkin-display`, '_blank')}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ExternalLink className="w-3 h-3" />
+        Full-screen kiosk
+      </button>
     </div>
   );
 }
@@ -196,7 +265,8 @@ export default function AdminPage() {
   const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [showQr, setShowQr] = useState(false);
+  const [showJoinQr, setShowJoinQr] = useState(false);
+  const [showCheckinQr, setShowCheckinQr] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['members', gymId],
@@ -233,7 +303,7 @@ export default function AdminPage() {
         {/* ── Members column ── */}
         <div className="flex-1 min-w-0 space-y-3">
           {/* QR Codes */}
-          <div className={`rounded-2xl bg-card overflow-hidden ${showQr ? 'border-2 border-primary/40' : 'border border-border'}`}>
+          <div className={`rounded-2xl bg-card overflow-hidden ${showCheckinQr || showJoinQr ? 'border-2 border-primary/40' : 'border border-border'}`}>
             <div className="px-4 py-3 flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-1.5 mr-auto">
                 <QrCode className="w-4 h-4 text-muted-foreground" />
@@ -241,22 +311,25 @@ export default function AdminPage() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => window.open(`/gyms/${gymId}/checkin-display`, '_blank')}
-                  className="flex items-center gap-1.5 text-xs font-medium bg-primary text-primary-foreground
-                    hover:bg-primary/90 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  Check-in Display
-                </button>
-                <button
-                  onClick={() => setShowQr(!showQr)}
+                  onClick={() => { setShowCheckinQr(!showCheckinQr); setShowJoinQr(false); }}
                   className="text-xs text-primary hover:underline"
                 >
-                  {showQr ? 'Hide Join QR' : 'Show Join QR'}
+                  {showCheckinQr ? 'Hide Check-in QR' : 'Show Check-in QR'}
+                </button>
+                <button
+                  onClick={() => { setShowJoinQr(!showJoinQr); setShowCheckinQr(false); }}
+                  className="text-xs text-primary hover:underline"
+                >
+                  {showJoinQr ? 'Hide Join QR' : 'Show Join QR'}
                 </button>
               </div>
             </div>
-            {showQr && (
+            {showCheckinQr && (
+              <div className="border-t border-border px-4 py-4">
+                <CheckinQrPanel gymId={gymId!} />
+              </div>
+            )}
+            {showJoinQr && (
               <div className="border-t border-border px-4 py-4">
                 <JoinQrPanel gymId={gymId!} />
               </div>
